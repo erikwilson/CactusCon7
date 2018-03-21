@@ -1,21 +1,21 @@
-THE BADGE
+# THE BADGE
 * ESP32 LoRa & oLed board
 * 18650 battery
 * Joystick & Buttons?
 
-badge parts:
+## badge parts:
   * $12.80+ : SX1276 ESP32 w/ OLED https://wholesaler.alibaba.com/product-detail/TTGO-LORA32-868-915Mhz-SX1276-ESP32_60716800689.html
   * ~$3 : 18650 Battery https://www.imrbatteries.com/samsung-26f-18650-2600mah-5a-protected-button-top-battery/
   * $4 : Joystick https://www.sparkfun.com/products/9032
   * $2.22 : Battery Holder https://www.digikey.com/product-detail/en/mpd-memory-protection-devices/BH-18650-PC/BH-18650-PC-ND/3029216
   or <$1 https://www.digikey.com/product-detail/en/keystone-electronics/54/36-54-ND/2254090
 
-extra bot parts:
+## extra bot parts:
   * $5 : Motor driver https://www.sparkfun.com/products/14451
   * $4 : Gear motors https://www.sparkfun.com/products/13302
   * $3 : Wheels https://www.sparkfun.com/products/13259
 
-CACTUS COIN
+## CACTUS COIN
 
 * CactusCoin are generated using LoRa and proof of proximity.
 * Each badge will contain a 'wallet' with a uuid and individual public/private key.
@@ -30,7 +30,7 @@ CACTUS COIN
 * Periodically badges may attempt to sync their wallet with a CactusCoin Node.
 * Base stations in each room may provide real time data of attendee locations.
 
-CACTUS B0T
+## CACTUS B0T
 
 * Add on kit for badge
 * Motor controller, motors, & wheels to move bot
@@ -42,13 +42,13 @@ CACTUS B0T
 * Other servo control?
 * Contest?!
 
-GAMES?
+## GAMES?
 * Multi-player
   * Pandemic?
 * Single-player
   * ?
 
-ARDUINO LIBRARIES
+## ARDUINO LIBRARIES
 
 * https://github.com/intrbiz/arduino-crypto
 * https://github.com/sandeepmistry/arduino-LoRa
@@ -57,11 +57,12 @@ ARDUINO LIBRARIES
 * https://github.com/me-no-dev/ESPAsyncWebServer
 * https://github.com/me-no-dev/AsyncTCP
 
-OTHER LIBRARIES OF INTEREST
+## OTHER LIBRARIES OF INTEREST
 
 * https://github.com/bluekitchen/btstack
+* https://github.com/felis/USB_Host_Shield_2.0
 
-OTHER REFERENCES
+## OTHER REFERENCES
 
 * https://github.com/espressif/arduino-esp32/
 * https://esp-idf.readthedocs.io/en/latest/
