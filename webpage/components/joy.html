@@ -1,0 +1,136 @@
+<link rel="import" href="../bower_components/polymer/polymer-element.html">
+<link rel="import" href="../bower_components/polymer/lib/mixins/gesture-event-listeners.html">
+<link rel="import" href="../bower_components/shadycss/apply-shim.html">
+
+<dom-module id="joy-stick">
+  <template>
+    <style>
+      :host {
+        display: flex;
+        height: 100%;
+      }
+      #con-border {
+        flex: 1;
+        display: flex;
+        border: 10px solid var(--con-color, blue);
+        min-width: 0;
+      }
+      #joy {
+        flex: 1;
+      }
+    </style>
+    <span id="con-border">
+      <svg id="joy" on-down="onJoy" on-track="onJoy" on-up="onJoy">
+        <circle cx$="[[x]]" cy$="[[y]]" r$="[[r]]" stroke$="[[stroke]]" stroke-width$="[[strokeWidth]]" fill$="[[fill]]" />
+      </svg>
+    </span>
+  </template>
+
+  <script>
+    class JoyStick extends Polymer.GestureEventListeners(Polymer.Element) {
+      static get is() {
+        return 'joy-stick';
+      }
+      constructor() {
+        super()
+        this.wsReady = false
+        this.isThrottled = false
+        this.lastMessage = null
+      }
+
+      connectedCallback() {
+        super.connectedCallback()
+        this.resetJoy()
+        window.addEventListener('resize', this.resetJoy.bind(this))
+        this.wsConnect()
+      }
+
+      wsConnect() {
+        console.log('connecting...')
+        const openEvent = (event) => {
+          console.log('connected!')
+          this.wsReady = true
+          this.updateStyles({'--con-color': 'green'})
+        }
+        const closeEvent = (event) => {
+          console.error('close',event)
+          this.updateStyles({'--con-color': 'orange'})
+          reconnect()
+        }
+        const errorEvent = (event) => {
+          console.error('error',event)
+          this.updateStyles({'--con-color': 'red'})
+          reconnect()
+        }
+        const reconnect = () => {
+          this.wsReady = false
+          this.ws.removeEventListener('open', openEvent)
+          this.ws.removeEventListener('close', closeEvent)
+          this.ws.removeEventListener('error', errorEvent)
+          this.ws.close()
+          setTimeout(this.wsConnect.bind(this),1000)
+        }
+
+        this.ws = new WebSocket('ws://' + (window.location.host || 'localhost:8080') + '/ws')
+        this.ws.addEventListener('open', openEvent)
+        this.ws.addEventListener('close', closeEvent)
+        this.ws.addEventListener('error', errorEvent)
+      }
+
+      resetJoy() {
+        const bounds = this.$.joy.getBoundingClientRect()
+        this.x = bounds.width/2
+        this.y = bounds.height/2
+        this.r = 10
+        this.stroke = "black"
+        this.strokeWidth = 1
+        this.fill = "grey"
+      }
+
+      onJoy(e) {
+        const sendCoords = e.type === 'down' || (e.type === 'track' && e.detail.state === 'track')
+        const stopCoords = e.type === 'up'
+
+        if (sendCoords) {
+          const bounds = this.$.joy.getBoundingClientRect()
+          this.x = e.detail.x - bounds.left
+          this.y = e.detail.y - bounds.top
+
+          if (this.x < 0) this.x = 0
+          if (this.y < 0) this.y = 0
+          if (this.x > bounds.width) this.x = bounds.width
+          if (this.y > bounds.height) this.y = bounds.height
+
+          this.fill = "purple"
+          this.r = 50
+          this.strokeWidth = 3;
+          const result = Uint16Array.from([this.x,this.y,bounds.width,bounds.height])
+          this.send(result)
+        }
+        if (stopCoords) {
+          this.resetJoy()
+          this.send(Uint16Array.from([0, 0, 0, 0]));
+        }
+      }
+
+      send(buffer) {
+        if (this.isThrottled) {
+          this.lastMessage = buffer;
+          return;
+        }
+        if (this.wsReady) this.ws.send(buffer)
+        else console.log('Websocket not ready!')
+        clearTimeout(this.sendTimeout)
+        this.sendTimeout = setTimeout(this.send.bind(this,buffer),100);
+        this.isThrottled = setTimeout( () => {
+          this.isThrottled = false;
+          if (this.lastMessage) {
+            this.send(this.lastMessage);
+            this.lastMessage = null;
+          }
+        }, 50);
+      }
+    }
+    customElements.define(JoyStick.is, JoyStick);
+  </script>
+</dom-module>

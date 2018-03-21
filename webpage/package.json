@@ -1,0 +1,21 @@
+{
+  "name": "cc7-bot-ui",
+  "version": "0.0.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "start": "./scripts/live.js",
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "author": "",
+  "license": "ISC",
+  "devDependencies": {
+    "browserify": "^16.1.1",
+    "browserify-livereload": "^1.0.10",
+    "cross-spawn": "^6.0.5",
+    "electron": "^1.8.4",
+    "lodash": "^4.17.5",
+    "watchify": "^3.11.0",
+    "ws": "^5.0.0"
+  }
+}

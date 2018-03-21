@@ -1,0 +1,22 @@
+{
+  "name": "cc7-bot-ui",
+  "description": "",
+  "main": "index.js",
+  "authors": [
+    "erikwilson <erik.e.wilson@gmail.com>"
+  ],
+  "license": "ISC",
+  "homepage": "https://github.com/erikwilson/CactusCon7",
+  "private": true,
+  "ignore": [
+    "**/.*",
+    "node_modules",
+    "bower_components",
+    "test",
+    "tests"
+  ],
+  "dependencies": {
+    "polymer": "2.*.*",
+    "iron-flex-layout": "2.*.*"
+  }
+}
