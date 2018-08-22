@@ -3,6 +3,10 @@ import os
 from cryptography.hazmat.backends import default_backend
 from cryptography.hazmat.primitives import serialization, hashes
 from cryptography.hazmat.primitives.asymmetric import padding, utils
+from cryptography.exceptions import InvalidSignature
+
+class InvalidMessageSignature(Exception):
+    pass
 
 def load_public_keys_from_dir(path):
     keys = {}
@@ -38,6 +42,9 @@ def load_public_key_from_file(path):
         return load_public_key(key_file.read())
 
 def sign(msg, private_key):
+    if isinstance(msg, str):
+        msg = msg.encode('utf8')
+
     chosen_hash = hashes.SHA256()
     hasher = hashes.Hash(chosen_hash, default_backend())
     hasher.update(msg)
@@ -50,20 +57,27 @@ def sign(msg, private_key):
         ),
         utils.Prehashed(chosen_hash)
     )
-    return base64.b64encode(sig)
+    return base64.b64encode(sig).decode('utf8')
 
 def verify(msg, sig64, public_key):
+    if isinstance(msg, str):
+        msg = msg.encode('utf8')
+
     sig = base64.b64decode(sig64)
     chosen_hash = hashes.SHA256()
     hasher = hashes.Hash(chosen_hash, default_backend())
     hasher.update(msg)
     digest = hasher.finalize()
-    public_key.verify(
-        sig,
-        digest,
-        padding.PSS(
-            mgf=padding.MGF1(hashes.SHA256()),
-            salt_length=padding.PSS.MAX_LENGTH
-        ),
-        utils.Prehashed(chosen_hash)
-    )
+
+    try:
+        public_key.verify(
+            sig,
+            digest,
+            padding.PSS(
+                mgf=padding.MGF1(hashes.SHA256()),
+                salt_length=padding.PSS.MAX_LENGTH
+            ),
+            utils.Prehashed(chosen_hash)
+        )
+    except InvalidSignature as ex:
+        raise InvalidMessageSignature from ex
