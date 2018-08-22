@@ -17,52 +17,72 @@ def client(request):
     return test_client
 
 @pytest.fixture
-def keys():
+def conference_key():
+    return crypto.load_public_key_from_file('test_conference_public.pem')
+
+@pytest.fixture
+def badge_keys():
     keys = {}
-    keys['conference'] = crypto.load_public_key_from_file('test_conference_public.pem')
-    keys['badge'] = crypto.load_private_key_from_file('test_badge_keypair.pem')
+    keys[1] = crypto.load_private_key_from_file('test_badge1_keypair.pem')
+    keys[2] = crypto.load_private_key_from_file('test_badge2_keypair.pem')
     return keys
 
-def post_message(client, keys, url, message):
+def post_message(client, key, url, message):
     """ Helper function to simplify posting JSON to the cactuscoin rest API, and create
-    a signature with the test badge key. """ 
-    message_json = json.dumps(message).encode('utf8')
-    data = {'msg':message_json, 'sig':crypto.sign(message_json, keys['badge'])}
-    return client.post(url, data=json.dumps(data).encode('utf8'), content_type='application/json')
+    a signature with the supplied test badge key. """ 
+    message_json = json.dumps(message)
+    sig = crypto.sign(message_json.encode('utf8'), key)
+    data = {'msg':message_json, 'sig':sig}
+    return client.post(url, data=json.dumps(data), content_type='application/json')
 
-def get_message(client, keys, url):
+def get_message(client, key, url):
     """ Helper function to simplify pulling JSON from a specified URL/endpoint and validating
     the conference key signature. """
     response = client.get(url).get_json()
-    crypto.verify(response['msg'].encode('utf8'), response['sig'], keys['conference'])
+    crypto.verify(response['msg'].encode('utf8'), response['sig'], key)
     message = json.loads(response['msg'])
     return message
 
-def test_register_badge(client, keys):
-    """ Test to successfully register badge, then re-register which should always fail. """
+def test_register_and_update_badge(client, badge_keys, conference_key):
+    """ Test to successfully register badge, and also update badge information. """
     badge = {'name':'cybaix'}
-    response = post_message(client, keys, '/badge/1', badge)
+    response = post_message(client, badge_keys[1], '/badge/1', badge)
     assert response.status_code == 200
-
-    saved_badge = get_message(client, keys, '/badge/1')
+    saved_badge = get_message(client, conference_key, '/badge/1')
     assert saved_badge == badge
 
-    # Attempt to re-register, this should fail.
-    response = post_message(client, keys, '/badge/1', badge)
+    # Test 'doh' scenario and ensure attendees can update information
+    badge = {'name':'mark'}
+    response = post_message(client, badge_keys[1], '/badge/1', badge)
+    assert response.status_code == 200
+    saved_badge = get_message(client, conference_key, '/badge/1')
+    assert saved_badge == badge
+
+def test_register_someone_elses_badge(client, badge_keys, conference_key):
+    """ Ensures a badge cannot register with an ID not associated with it. """
+    badge = {'name':'cybaix'}
+    response = post_message(client, badge_keys[2], '/badge/1', badge)
     assert response.status_code == 403
 
-def test_register_badge_bad_data(client, keys):
+    # make sure the real badge owner can still claim the badge
+    badge = {'name':'cybaix'}
+    response = post_message(client, badge_keys[1], '/badge/1', badge)
+    assert response.status_code == 200
+    saved_badge = get_message(client, conference_key, '/badge/1')
+    assert saved_badge == badge
+
+def test_register_badge_bad_data(client, badge_keys, conference_key):
     """ Attempts to register a badge with a bunch of bogus data. """
     badge = {'name':'cybaix'}
-    response = post_message(client, keys, '/badge/a2_+9U*Eji2*Y*AOINHF', badge)
+    response = post_message(client, badge_keys[1], '/badge/a2_+9U*Eji2*Y*AOINHF', badge)
     assert response.status_code == 404
 
     badge = {'name':'cybaix'}
-    response = post_message(client, keys, '/badge/a_\/', badge)
+    response = post_message(client, badge_keys[1], '/badge/a_\/', badge)
     assert response.status_code == 404
 
     badge = {'name':'`^&%'}
-    response = post_message(client, keys, '/badge/1', badge)
+    response = post_message(client, badge_keys[1], '/badge/1', badge)
     assert response.status_code == 400
 
 def test_submit_coin(client):
