@@ -15,7 +15,24 @@ class Badge(Resource):
 
     def post(self, badge_id):
         message = get_signed_json(badge_id)
-        redis_store.hset('badge_names', badge_id, message['name'].strip())
+
+        try:
+            self.validate(message)
+        except ValueError as ex:
+            abort(400, message=signed_jsonify({'status':400, 'message':str(ex)}))
+        redis_store.hset('badge_names', badge_id, message['name'])
+
+    def validate(self, badge_dict):
+        for key in badge_dict:
+            try:
+                badge_dict[key].strip()
+            except AttributeError:
+                continue
+        try:
+            if not str.isalnum(badge_dict['name']):
+                raise ValueError('Name must be alpha numeric')
+        except KeyError:
+            raise ValueError('Name must be set')
 
 class Coin(Resource):
     def post(self, badge_id):
@@ -36,19 +53,24 @@ class MockRedisWrapper(MockRedis):
         return cls()
 
 def signed_jsonify(data):
-    message = json.dumps(data).encode('utf8')
+    message = json.dumps(data)
+    sig = crypto.sign(message, conference_key)
     response = {'msg':message, 'sig':crypto.sign(message, conference_key)}
     return jsonify(response)
 
 def get_signed_json(badge_id):
     json_data = request.get_json()
-    crypto.verify(badge_keys[badge_id], json_data['msg'], json_data['sig'])
+    try:
+        crypto.verify(json_data['msg'], json_data['sig'], badge_keys[badge_id])
+    except crypto.InvalidMessageSignature:
+        msg = 'Invalid signature supplied for badge #{}'.format(badge_id)
+        abort(403, message=signed_jsonify({'status':403, 'message':msg}))
     return json.loads(json_data['msg'])
 
 def load_badge_keys():
     key_files = redis_store.hgetall('badge_keys')
     for badge_id in key_files:
-        badge_keys[int(badge_id)] = crypto.load_public_key(key_files[badge_id].decode('utf8'))
+        badge_keys[int(badge_id)] = crypto.load_public_key(key_files[badge_id])
 
 def create_app():
     global redis_store, conference_key
@@ -63,8 +85,10 @@ def create_app():
     redis_store.init_app(app)
 
     if app.testing:
-        with open('test_badge_public.pem', 'rb') as key_file:
+        with open('test_badge1_public.pem', 'rb') as key_file:
             redis_store.hset('badge_keys', 1, key_file.read())
+        with open('test_badge2_public.pem', 'rb') as key_file:
+            redis_store.hset('badge_keys', 2, key_file.read())
 
     conference_key = crypto.load_private_key_from_file('test_conference_keypair.pem')
     load_badge_keys()
