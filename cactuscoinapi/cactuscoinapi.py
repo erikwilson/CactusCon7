@@ -36,7 +36,20 @@ class Badge(Resource):
 
 class Coin(Resource):
     def post(self, badge_id):
-        pass
+        coin = get_signed_json(badge_id)
+
+        # validate signatures
+        self.validate(coin)
+
+        # check if a coin already exists
+
+        # save coin
+
+    def validate(self, coin):
+        csr = json.loads(coin['csr'])
+        beacon_sig = coin.pop('beacon_sig')
+        # validate beacon signature (coin, beacon_sig)
+        # validate seer signature (csr, coin['seer_sig'])
 
 class CoinList(Resource):
     def get(self, badge_id):
@@ -94,7 +107,7 @@ def create_app():
     load_badge_keys()
 
     api.add_resource(Badge, '/badge/<int:badge_id>')
-    api.add_resource(Coin, '/csr/<int:badge_id>')
+    api.add_resource(Coin, '/coin/<int:badge_id>')
     api.add_resource(CoinList, '/coinlist/<int:badge_id>')
     api.add_resource(Leaderboard, '/leaderboard')
 

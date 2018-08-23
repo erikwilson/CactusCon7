@@ -27,6 +27,13 @@ def badge_keys():
     keys[2] = crypto.load_private_key_from_file('test_badge2_keypair.pem')
     return keys
 
+@pytest.fixture
+def badge_pub_keys():
+    keys = {}
+    keys[1] = crypto.load_public_key_from_file('test_badge1_public.pem')
+    keys[2] = crypto.load_public_key_from_file('test_badge2_public.pem')
+    return keys
+
 def post_message(client, key, url, message):
     """ Helper function to simplify posting JSON to the cactuscoin rest API, and create
     a signature with the supplied test badge key. """ 
@@ -85,8 +92,22 @@ def test_register_badge_bad_data(client, badge_keys, conference_key):
     response = post_message(client, badge_keys[1], '/badge/1', badge)
     assert response.status_code == 400
 
-def test_submit_coin(client):
-    pass
+def test_submit_coin(client, badge_pub_keys, badge_keys):
+    badge1_msg = json.dumps({'beacon_id': 1, 'seer_id':2}) # badge 1 beaconed, badge 2 did the CSR
+    badge1_csr = {'csr':badge1_msg, 'seer_sig':crypto.sign(badge1_msg, badge_keys[2])}
+    badge2_sig = crypto.sign(json.dumps(badge1_csr), badge_keys[1])
+    coin = badge1_csr
+    coin['beacon_sig'] = badge2_sig
+    print (coin)
+    coin = json.dumps(coin)
+    badge1_submission = {'msg':coin, 'sig':crypto.sign(coin, badge_keys[1])}
+    badge2_submission = {'msg':coin, 'sig':crypto.sign(coin, badge_keys[2])}
+
+    response = post_message(client, badge_keys[1], '/coin/1', badge1_submission)
+    assert response.status_code == 201
+
+    response = post_message(client, badge_keys[2], '/coin/2', badge1_submission)
+    assert response.status_code == 208
     # parings = set(key1,key2)
     # wallets['id'] = current coin count
     # attendees['id'] = json data about attendee
