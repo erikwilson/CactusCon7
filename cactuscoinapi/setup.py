@@ -16,5 +16,7 @@ setup(
         'pytest-datadir',
         'pytest-runner',
         'pytest-cov',
+        'pytest-mock',
+        'mockredispy',
     ]
 )
