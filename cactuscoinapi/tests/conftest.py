@@ -38,21 +38,23 @@ def badge_pub_keys(shared_datadir):
     keys[2] = crypto.load_public_key_from_file(str(shared_datadir / 'test_badge2_public.pem'))
     return keys
 
-def post_message(client, key, url, message):
-    """ Helper function to simplify posting JSON to the cactuscoin rest API, and create
-    a signature with the supplied test badge key. """ 
-    message_json = json.dumps(message)
-    sig = crypto.sign(message_json.encode('utf8'), key)
-    data = {'msg':message_json, 'sig':sig}
-    return client.post(url, data=json.dumps(data), content_type='application/json')
+@pytest.fixture
+def valid_cactuscon_coin(badge_pub_keys, badge_keys):
+    badge1_msg = json.dumps({'beacon_id': 1, 'seer_id':2}) # badge 1 beaconed, badge 2 did the CSR
+    badge1_csr = {'csr':badge1_msg, 'seer_sig':crypto.sign(badge1_msg, badge_keys[2])}
+    badge2_sig = crypto.sign(json.dumps(badge1_csr), badge_keys[1])
+    coin = badge1_csr
+    coin['beacon_sig'] = badge2_sig
+    return coin
 
-def get_message(client, key, url):
-    """ Helper function to simplify pulling JSON from a specified URL/endpoint and validating
-    the conference key signature. """
-    response = client.get(url).get_json()
-    crypto.verify(response['msg'].encode('utf8'), response['sig'], key)
-    message = json.loads(response['msg'])
-    return message
+@pytest.fixture
+def invalid_cactuscon_coin(badge_pub_keys, badge_keys):
+    badge1_msg = json.dumps({'beacon_id': 2, 'seer_id':1}) # swapped id so signatures won't match
+    badge1_csr = {'csr':badge1_msg, 'seer_sig':crypto.sign(badge1_msg, badge_keys[2])}
+    badge2_sig = crypto.sign(json.dumps(badge1_csr), badge_keys[1])
+    coin = badge1_csr
+    coin['beacon_sig'] = badge2_sig
+    return coin
 
 #User pops in batteries, prompted by display to type a name or use default.
 #Registration associates this key with this name.
