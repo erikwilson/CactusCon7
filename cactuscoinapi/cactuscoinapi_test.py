@@ -98,16 +98,12 @@ def test_submit_coin(client, badge_pub_keys, badge_keys):
     badge2_sig = crypto.sign(json.dumps(badge1_csr), badge_keys[1])
     coin = badge1_csr
     coin['beacon_sig'] = badge2_sig
-    print (coin)
-    coin = json.dumps(coin)
-    badge1_submission = {'msg':coin, 'sig':crypto.sign(coin, badge_keys[1])}
-    badge2_submission = {'msg':coin, 'sig':crypto.sign(coin, badge_keys[2])}
 
-    response = post_message(client, badge_keys[1], '/coin/1', badge1_submission)
-    assert response.status_code == 201
+    response = post_message(client, badge_keys[1], '/coin/1', coin)
+    assert response.status_code == 200
 
-    response = post_message(client, badge_keys[2], '/coin/2', badge1_submission)
-    assert response.status_code == 208
+    response = post_message(client, badge_keys[2], '/coin/2', coin)
+    assert response.status_code == 409
     # parings = set(key1,key2)
     # wallets['id'] = current coin count
     # attendees['id'] = json data about attendee

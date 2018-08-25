@@ -2,7 +2,8 @@ import json
 from flask import Flask, request, jsonify
 from flask_restful import reqparse, abort, Resource, Api
 from flask_redis import FlaskRedis
-from mockredis import MockRedis
+#from mockredis import MockRedis
+import mockredis
 import crypto
 
 redis_store = None
@@ -11,7 +12,7 @@ badge_keys = {}
 
 class Badge(Resource):
     def get(self, badge_id):
-        return signed_jsonify({'name': redis_store.hget('badge_names', badge_id)})
+        return signed_jsonify({'name': redis_store.hget('badge_names', badge_id).decode('utf8')})
 
     def post(self, badge_id):
         message = get_signed_json(badge_id)
@@ -39,9 +40,19 @@ class Coin(Resource):
         coin = get_signed_json(badge_id)
 
         # validate signatures
-        self.validate(coin)
+        try:
+            csr = self.validate(coin)
+        except crypto.InvalidSignature:
+            msg = 'Invalid signatures on coin'
+            abort(403, message=signed_jsonify({'status':403, 'message':msg}))
 
         # check if a coin already exists
+        keys = sorted((csr['beacon_id'], csr['seer_id']))
+
+        if redis_store.sismember('coins', keys):
+            abort(409, message=signed_jsonify({'status':208, 'message':'coin already submitted'}))
+
+        redis_store.sadd('coins', keys)
 
         # save coin
 
@@ -49,7 +60,10 @@ class Coin(Resource):
         csr = json.loads(coin['csr'])
         beacon_sig = coin.pop('beacon_sig')
         # validate beacon signature (coin, beacon_sig)
+        crypto.verify(json.dumps(coin), beacon_sig, badge_keys[csr['beacon_id']])
         # validate seer signature (csr, coin['seer_sig'])
+        crypto.verify(coin['csr'], coin['seer_sig'], badge_keys[csr['seer_id']])
+        return csr
 
 class CoinList(Resource):
     def get(self, badge_id):
@@ -59,11 +73,6 @@ class Leaderboard(Resource):
     def get(self):
         pass
 
-class MockRedisWrapper(MockRedis):
-    '''A wrapper to add the `from_url` classmethod'''
-    @classmethod
-    def from_url(cls, *args, **kwargs):
-        return cls()
 
 def signed_jsonify(data):
     message = json.dumps(data)
@@ -92,7 +101,7 @@ def create_app():
     app.testing = True
 
     if app.testing:
-        redis_store = FlaskRedis.from_custom_provider(MockRedisWrapper)
+        redis_store = FlaskRedis.from_custom_provider(mockredis.mock_redis_client())
     else:
         redis_store = FlaskRedis()
     redis_store.init_app(app)
