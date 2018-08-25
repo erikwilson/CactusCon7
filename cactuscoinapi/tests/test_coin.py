@@ -2,19 +2,24 @@ import json
 from utils import get_message,post_message
 from cactuscoinapi import crypto
 
-def test_submit_coin(client, badge_pub_keys, badge_keys):
-    badge1_msg = json.dumps({'beacon_id': 1, 'seer_id':2}) # badge 1 beaconed, badge 2 did the CSR
-    badge1_csr = {'csr':badge1_msg, 'seer_sig':crypto.sign(badge1_msg, badge_keys[2])}
-    badge2_sig = crypto.sign(json.dumps(badge1_csr), badge_keys[1])
-    coin = badge1_csr
-    coin['beacon_sig'] = badge2_sig
-
-    response = post_message(client, badge_keys[1], '/coin/1', coin)
+def test_submit_valid_coin(client, valid_cactuscon_coin, badge_keys):
+    response = post_message(client, badge_keys[1], '/coin/1', valid_cactuscon_coin)
     assert response.status_code == 200
 
-    response = post_message(client, badge_keys[2], '/coin/2', coin)
+    response = post_message(client, badge_keys[2], '/coin/2', valid_cactuscon_coin)
     assert response.status_code == 409
-    # parings = set(key1,key2)
-    # wallets['id'] = current coin count
-    # attendees['id'] = json data about attendee
-    # coins_'id' = list of coins
+
+def test_submit_invalid_coin(client, invalid_cactuscon_coin, badge_keys):
+    response = post_message(client, badge_keys[1], '/coin/1', invalid_cactuscon_coin)
+    assert response.status_code == 403
+
+def test_get_coins(mocker, client, valid_cactuscon_coin, badge_keys, conference_key):
+    #mocker.patch(
+    post_message(client, badge_keys[2], '/badge/2', {'name':'cybaix'})
+
+    response = post_message(client, badge_keys[1], '/coin/1', valid_cactuscon_coin)
+    assert response.status_code == 200
+
+    coins = get_message(client, conference_key, '/coin/1')
+    assert coins[0]['other_id'] == 2
+    assert coins[0]['other_name'] == 'cybaix'
