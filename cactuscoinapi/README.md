@@ -1,6 +1,6 @@
-# Project Title
+# Cactus Coin API
+The Cactus Coin API is a REST API designed to provide badges with an interface to register, and submit coins. It also provides the front end with an interface to query data regarding earned badge coins, badge names, locations, an overall leaderboard.
 
-One Paragraph of project description goes here
 
 ## Getting Started
 
@@ -34,22 +34,10 @@ End with an example of getting some data out of the system or using it for a lit
 
 ## Running the tests
 
-Explain how to run the automated tests for this system
-
-### Break down into end to end tests
-
-Explain what these tests test and why
+This project uses pytest to execute unit tests.  Running tests is simple, just run:
 
 ```
-Give an example
-```
-
-### And coding style tests
-
-Explain what these tests test and why
-
-```
-Give an example
+python setup.py test
 ```
 
 ## Deployment
