@@ -60,13 +60,14 @@ class Coin(Resource):
             msg = 'Invalid signatures on coin'
             abort(403, message=signed_jsonify({'status':403, 'message':msg}))
 
+        # TODO: Could use some redis data structure clean up, there is better ways to do this
         # check if a coin already exists
         keys = sorted((csr['beacon_id'], csr['seer_id']))
 
         if app.redis_store.hget('coins', keys):
             abort(409, message=signed_jsonify({'status':208, 'message':'coin already submitted'}))
 
-        redis_pipe = app.redis_store.pipeline()
+        redis_pipe = app.redis_store.pipeline() # complete the following redis operations atomically
         redis_pipe.hset('coins', keys, int(time.time()))
         redis_pipe.sadd('badge_coins_{}'.format(csr['beacon_id']), csr['seer_id'])  
         redis_pipe.sadd('badge_coins_{}'.format(csr['seer_id']), csr['beacon_id'])  
