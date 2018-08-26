@@ -39,7 +39,7 @@ def badge_pub_keys(shared_datadir):
     return keys
 
 @pytest.fixture
-def valid_cactuscon_coin(badge_pub_keys, badge_keys):
+def valid_cactuscoin(badge_pub_keys, badge_keys):
     badge1_msg = json.dumps({'beacon_id': 1, 'seer_id':2}) # badge 1 beaconed, badge 2 did the CSR
     badge1_csr = {'csr':badge1_msg, 'seer_sig':crypto.sign(badge1_msg, badge_keys[2])}
     badge2_sig = crypto.sign(json.dumps(badge1_csr), badge_keys[1])
@@ -48,7 +48,7 @@ def valid_cactuscon_coin(badge_pub_keys, badge_keys):
     return coin
 
 @pytest.fixture
-def invalid_cactuscon_coin(badge_pub_keys, badge_keys):
+def invalid_cactuscoin(badge_pub_keys, badge_keys):
     badge1_msg = json.dumps({'beacon_id': 2, 'seer_id':1}) # swapped id so signatures won't match
     badge1_csr = {'csr':badge1_msg, 'seer_sig':crypto.sign(badge1_msg, badge_keys[2])}
     badge2_sig = crypto.sign(json.dumps(badge1_csr), badge_keys[1])
