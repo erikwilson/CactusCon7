@@ -71,7 +71,14 @@ class Coin(Resource):
         redis_pipe.hset('coins', keys, int(time.time()))
         redis_pipe.sadd('badge_coins_{}'.format(csr['beacon_id']), csr['seer_id'])  
         redis_pipe.sadd('badge_coins_{}'.format(csr['seer_id']), csr['beacon_id'])  
+        redis_pipe.zincrby('scoreboard', csr['beacon_id'])
+        redis_pipe.zincrby('scoreboard', csr['seer_id'])
         redis_pipe.execute()
+
+        #scoreboard sortedset 
+        #badge_N [name] [
+        #coin_1,2 [generated timestamp] [submitted timestamp]
+        #badge_values
 
     def validate(self, coin):
         """ Checks the signatures on the coin for the badges involved. Looks up appropriate badge
