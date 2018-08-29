@@ -2,7 +2,7 @@ import json
 from flask import Flask, request, jsonify
 from flask_restful import reqparse, abort, Resource, Api
 from flask_redis import FlaskRedis
-from . import crypto, badge, coin, leaderboard, db, keys
+from . import crypto, badge, coin, scoreboard, db, keys
 
 def create_app(test_config=None):
     global conference_key, badge_keys
@@ -23,8 +23,7 @@ def create_app(test_config=None):
 
     api.add_resource(badge.Badge, '/badge/<int:badge_id>')
     api.add_resource(coin.Coin, '/coin/<int:badge_id>')
-    #api.add_resource(CoinList, '/coinlist/<int:badge_id>')
-    api.add_resource(leaderboard.Leaderboard, '/leaderboard')
+    api.add_resource(scoreboard.Scoreboard, '/scoreboard')
 
     return app
 
