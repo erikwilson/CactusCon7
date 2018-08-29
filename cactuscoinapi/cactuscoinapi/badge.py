@@ -14,7 +14,11 @@ class Badge(Resource):
             self.validate(message)
         except ValueError as ex:
             abort(400, message=signed_jsonify({'status':400, 'message':str(ex)}))
-        app.redis_store.hset('badge_names', badge_id, message['name'])
+
+        redis_pipe = app.redis_store.pipeline()
+        redis_pipe.hset('badge_names', badge_id, message['name'])
+        redis_pipe.zincrby('scoreboard', badge_id)
+        redis_pipe.execute()
 
     def validate(self, badge_dict):
         for key in badge_dict:
