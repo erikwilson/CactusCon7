@@ -2,7 +2,14 @@ from flask import current_app as app
 from . import crypto
 
 def init_keys():
-    conference_key = crypto.load_private_key_from_file(app.config['CONFERENCE_PRIVATE_KEY'])
+    if 'CONFERENCE_PRIVATE_KEY' in app.config:
+        conference_key = crypto.load_private_key(app.config['CONFERENCE_PRIVATE_KEY'])
+    elif 'CONFERENCE_PRIVATE_KEY_FILE' in app.config:
+        conference_key = crypto.load_private_key_from_file(
+                app.config['CONFERENCE_PRIVATE_KEY_FILE'])
+    else: # this is shitty, probably a better way to handle config issues in flask
+        msg = 'Neither CONFERENCE_PRIVATE_KEY or CONFERENCE_PRIVATE_KEY_FILE set in app config'
+        raise ValueError(msg)
 
     if app.testing:
         with open(app.config['TEST_BADGE_PUBLIC_KEYS'][1], 'rb') as key_file:
