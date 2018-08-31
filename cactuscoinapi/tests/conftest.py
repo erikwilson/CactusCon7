@@ -1,16 +1,41 @@
 import json
 import pytest
+import functools
 
+import mockredis
+from flask_redis import FlaskRedis
 from cactuscoinapi import crypto
 from cactuscoinapi import create_app
 
+def pytest_namespace():
+        return {'redis': None}
+
+def pytest_addoption(parser):
+        parser.addoption('--real-redis', action='store_true',
+                help='run tests using a real instance running at localhost:6379')
+
 @pytest.fixture
-def client(request, shared_datadir):
-    config = {'CONFERENCE_PRIVATE_KEY': str(shared_datadir / 'test_conference_keypair.pem'),
+def real_redis_opt(request):
+    return request.config.getoption("--real-redis")
+
+@pytest.fixture
+def client(request, shared_datadir, real_redis_opt, mocker):
+    config = {'CONFERENCE_PRIVATE_KEY_FILE': str(shared_datadir / 'test_conference_keypair.pem'),
               'TEST_BADGE_PUBLIC_KEYS': {1:str(shared_datadir / 'test_badge1_public.pem'),
                                          2:str(shared_datadir / 'test_badge2_public.pem')
                                         }
              }
+
+    if real_redis_opt:
+        pytest.redis = FlaskRedis()
+    else:
+        pytest.redis = FlaskRedis.from_custom_provider(mockredis.mock_redis_client())
+
+    def retredis():
+        return pytest.redis
+
+    mocker.patch('cactuscoinapi.db.FlaskRedis', retredis)
+
     app = create_app(config)
     test_client = app.test_client()
 
