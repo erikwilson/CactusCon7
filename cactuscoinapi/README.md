@@ -24,6 +24,7 @@ python setup.py install
 It is then possible to start and run the application in development mode.
 
 ```
+export CACTUSCONAPI_SETTINGS_FILE=cactuscoinapi.cfg
 export FLASK_APP=cactuscoinapi
 export FLASK_DEBUG=true
 flask run
