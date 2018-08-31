@@ -9,11 +9,12 @@ def create_app(test_config=None):
     app = Flask(__name__)
     api = Api(app)
 
+    #app.config.from_object('yourapplication.default_settings')
+
     if test_config is None:
-        app.config.from_pyfile('config.py', silent=True)
+        app.config.from_envvar('CACTUSCONAPI_SETTINGS_FILE')
         app.testing = False
     else:
-        import mockredis
         app.testing = True
         app.config.from_mapping(test_config)
 
