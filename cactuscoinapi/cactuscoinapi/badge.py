@@ -8,6 +8,12 @@ class Badge(Resource):
         return signed_jsonify({'name': name})
 
     def post(self, badge_id):
+        """ Registers the badge with the supplied name if it doesn't already exist.  If it does
+        update the name with the one supplied.
+
+        Arguments:
+          name: Alpha numeric name to associate with this badge.
+        """
         message = get_signed_json(badge_id)
 
         try:
@@ -17,7 +23,10 @@ class Badge(Resource):
 
         redis_pipe = app.redis_store.pipeline()
         redis_pipe.hset('badge_names', badge_id, message['name'])
-        redis_pipe.zincrby('scoreboard', badge_id)
+
+        if app.redis_store.hget('badge_names', badge_id) is None:
+            redis_pipe.zincrby('scoreboard', badge_id)
+
         redis_pipe.execute()
 
     def validate(self, badge_dict):
