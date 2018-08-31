@@ -52,7 +52,7 @@
 
 * Matrix Design (incomplete?!): https://github.com/espressif/esp-iot-solution/blob/master/documents/touch_pad_solution/touch_sensor_design_en.md#46-matrix-touch-button-firmware-design
 * Correct equation is n choose floor(n/2), so 4 choose 2 = 6, 5 choose 2 = 10, 6 choose 3 = 20...! (where n = # capacitive sensor lines)
-* Should allow for multi-touch. A button is composed of a set of lines, if all of the lines in the set are low the button is being pressed.
+* Only one button active at a time, event must have # of low lines equal to the the set size (floor(n/2)), otherwise ignore. A button is composed of a set of lines, if all of the lines in the set are low the button is being pressed. 
 
 ## ARDUINO LIBRARIES
 

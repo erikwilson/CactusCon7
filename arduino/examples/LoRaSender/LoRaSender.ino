@@ -34,7 +34,7 @@ void setup() {
 }
 
 void loop() {
-  const float Vb = (7.f * analogRead(38)) / 2047.0;
+  const float Vb = (7.1f * analogRead(38)) / 2047.0;
 
   String output = "v" + String(Vb) + "\n";
   output += "Sending packet: ";
