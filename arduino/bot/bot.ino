@@ -1,4 +1,4 @@
-#include <Adafruit_NeoPixel.h>
+//#include <Adafruit_NeoPixel.h>
 
 #include <LoRa.h>
 #include <Arduino.h>
@@ -60,13 +60,13 @@ char spaces[] = "                                                               
 #define BAND    470E6  //915E6 -- 这里的模式选择中，检查一下是否可在中国实用915这个频段
 
 #define PWMA_CH 1
-#define PWMA    25
-#define AI2     33
-#define AI1     32
-#define STDBY   17
-#define BI1     12
-#define BI2     13
-#define PWMB    21
+#define PWMA    15
+#define AI2     23
+#define AI1     22
+#define STDBY   2
+#define BI1     21
+#define BI2     17
+#define PWMB    4
 #define PWMB_CH 2
 
 #define LEDC_TIMER_13_BIT  13
@@ -452,7 +452,41 @@ void setupWifi() {
 }
 
 void setup() {
-  pinMode(25, OUTPUT); //Send success, LED will bright 1 second
+
+  message[0] = '\0';
+
+  Serial.begin(115200);
+  while (!Serial); //If just the the basic function, must connect to a computer
+
+
+  uint8_t chipid[6];
+  esp_efuse_read_mac(chipid);
+  sprintf(macString, "%02x%02x", chipid[4], chipid[5]);
+  Serial.printf("%02x:%02x:%02x:%02x:%02x:%02x\n", chipid[0], chipid[1], chipid[2], chipid[3], chipid[4], chipid[5]);
+
+  pinMode(16, OUTPUT);
+  digitalWrite(16, LOW);    // set GPIO16 low to reset OLED
+  delay(50);
+  digitalWrite(16, HIGH); // while OLED is running, must set GPIO16 in high
+
+  display.init();
+  display.flipScreenVertically();
+
+  writeOled("chirp chrip !");
+
+  display.clear();
+  display.setTextAlignment(TEXT_ALIGN_LEFT);
+  display.setFont(ArialMT_Plain_16);
+
+  display.drawStringMaxWidth(0, 0, 128, "me: " + String(macString));
+  display.drawStringMaxWidth(0, 18, 128, "chirp chrip!");
+
+  display.display();
+
+  // delay(3000);
+  // display.displayOff();
+  // display.end();
+  // digitalWrite(16, LOW);    // set GPIO16 low to reset OLED
 
   pinMode(AI1, OUTPUT);
   pinMode(AI2, OUTPUT);
@@ -469,35 +503,7 @@ void setup() {
   ledcSetup(PWMB_CH, LEDC_BASE_FREQ, LEDC_TIMER_13_BIT);
   ledcAttachPin(PWMB, PWMB_CH);
 
-  message[0] = '\0';
-
-  Serial.begin(115200);
-  while (!Serial); //If just the the basic function, must connect to a computer
-
-  uint8_t chipid[6];
-  esp_efuse_read_mac(chipid);
-  sprintf(macString, "%02x%02x", chipid[4], chipid[5]);
-  Serial.printf("%02x:%02x:%02x:%02x:%02x:%02x\n", chipid[0], chipid[1], chipid[2], chipid[3], chipid[4], chipid[5]);
-
   setupWifi();
-
-  pinMode(16, OUTPUT);
-  digitalWrite(16, LOW);    // set GPIO16 low to reset OLED
-  delay(50);
-  digitalWrite(16, HIGH); // while OLED is running, must set GPIO16 in high
-  display.init();
-  display.flipScreenVertically();
-
-  writeOled("chirp chrip !");
-
-  display.clear();
-  display.setTextAlignment(TEXT_ALIGN_LEFT);
-  display.setFont(ArialMT_Plain_16);
-
-  display.drawStringMaxWidth(0, 0, 128, "me: " + String(macString));
-  display.drawStringMaxWidth(0, 18, 128, "chirp chrip!");
-
-  display.display();
 
   // autostrip.begin();
   // controlstrip.begin();
@@ -506,6 +512,8 @@ void setup() {
   // LoRa.print(macString);
   // LoRa.print("|chirp!");
   // LoRa.endPacket();
+
+  setupTouch();
 }
 
 void redirect(AsyncWebServerRequest *request){
@@ -523,13 +531,85 @@ void parsePacket() {
   }
 }
 
+int touchThreshold = 35;
+static volatile bool touched[10] = {};
+
+void IRAM_ATTR gotTouched0() { touched[0] = true; }
+void IRAM_ATTR gotTouched1() { touched[1] = true; }
+void IRAM_ATTR gotTouched2() { touched[2] = true; }
+void IRAM_ATTR gotTouched3() { touched[3] = true; }
+void IRAM_ATTR gotTouched4() { touched[4] = true; }
+void IRAM_ATTR gotTouched5() { touched[5] = true; }
+void IRAM_ATTR gotTouched6() { touched[6] = true; }
+void IRAM_ATTR gotTouched7() { touched[7] = true; }
+void IRAM_ATTR gotTouched8() { touched[8] = true; }
+void IRAM_ATTR gotTouched9() { touched[9] = true; }
+
+void setupTouch() {
+  // pinMode(T0, INPUT);
+  // pinMode(T1, INPUT);
+  // pinMode(T2, INPUT);
+  // pinMode(T3, INPUT);
+  pinMode(T4, INPUT);
+  pinMode(T5, INPUT);
+  // pinMode(T6, INPUT);
+  pinMode(T7, INPUT);
+  pinMode(T8, INPUT);
+  pinMode(T9, INPUT);
+
+  delay(1000);
+
+  // touchAttachInterrupt( T0, gotTouched0, touchThreshold);
+  // touchAttachInterrupt( T1, gotTouched1, touchThreshold);
+  // touchAttachInterrupt( T2, gotTouched2, touchThreshold);
+  // touchAttachInterrupt( T3, gotTouched3, touchThreshold);
+  touchAttachInterrupt( T4, gotTouched4, touchThreshold);
+  touchAttachInterrupt( T5, gotTouched5, touchThreshold);
+  // touchAttachInterrupt( T6, gotTouched6, touchThreshold);
+  touchAttachInterrupt( T7, gotTouched7, touchThreshold);
+  touchAttachInterrupt( T8, gotTouched8, touchThreshold);
+  touchAttachInterrupt( T9, gotTouched9, touchThreshold);
+}
+
 void loop() {
   dnsServer.processNextRequest();
 
-  display.clear();
-  display.drawStringMaxWidth(0, 0, 128, "mem: " + String(ESP.getFreeHeap()));
-  display.display();
+  // display.clear();
+  // display.drawStringMaxWidth(0, 0, 128, "mem: " + String(ESP.getFreeHeap()));
+  // display.display();
 
+  delay(250);
+  Serial.print("------------ ");
+  Serial.println(ESP.getFreeHeap());
+  Serial.print(" 0:");
+  // Serial.print(touchRead(T0));
+  // Serial.print(" 1:");
+  // Serial.print(touchRead(T1));
+  // Serial.print(" 2:");
+  // Serial.print(touchRead(T2));
+  // Serial.print(" 3:");
+  // Serial.print(touchRead(T3));
+  Serial.print(" 4:");
+  Serial.print(touchRead(T4));
+  Serial.print(" 5:");
+  Serial.print(touchRead(T5));
+  // Serial.print(" 6:");
+  // Serial.print(touchRead(T6));
+  Serial.print(" 7:");
+  Serial.print(touchRead(T7));
+  Serial.print(" 8:");
+  Serial.print(touchRead(T8));
+  Serial.print(" 9:");
+  Serial.print(touchRead(T9));
+  Serial.println();
+  for (int i=0; i<10; i++) {
+    if (touched[i] == true) {
+      Serial.print(i);
+      Serial.print(" ");
+      touched[i] = false;
+    }
+  }
+  Serial.println();
   // delay(200);
   // display.clear();
   // float VBAT1 = analogRead(32) * (7.2 / 4095.0);
