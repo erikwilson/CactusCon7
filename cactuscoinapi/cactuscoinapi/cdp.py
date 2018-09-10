@@ -36,33 +36,58 @@ class GlobalBroadcastPayload(AbstractBaseMessage):
         return b''
 
 class CactuscoinSigningRequest(AbstractBaseMessage):
-    def __init__(self, csr_id, broadcasted_id):
+    def __init__(self, csr_id, broadcasted_id, signing_key=None, csr_signature=None):
         self.csr_id = csr_id
         self.broadcasted_id = broadcasted_id
-
-    @staticmethod
-    def from_bytes(raw_bytes):
-        csr_id, broadcasted_id = struct.unpack('!HH', raw_bytes[:4])
-        return CactuscoinSigningRequest(csr_id, broadcasted_id)
-
-    def to_bytes(self):
-        return struct.pack('!HH', self.csr_id, self.broadcasted_id)
-
-class CactuscoinAuthenticationData(AbstractBaseMessage):
-    def __init__(self, csr_id, broadcasted_id, csr_signature):
-        self.csr_id = csr_id
-        self.broadcasted_id = broadcasted_id
+        self.signing_key = signing_key
         self.csr_signature = csr_signature
 
     @staticmethod
     def from_bytes(raw_bytes):
         csr_id, broadcasted_id = struct.unpack('!HH', raw_bytes[:4])
-        csr_signature = data[4:SIGNATURE_LENGTH + 4]
-        return CactuscoinAuthenticationData(csr_id, broadcasted_id, csr_signature)
+        csr_signature = raw_bytes[4:SIGNATURE_LENGTH + 4]
+        return CactuscoinSigningRequest(csr_id, broadcasted_id, csr_signature=csr_signature)
 
     def to_bytes(self):
         raw_bytes = struct.pack('!HH', self.csr_id, self.broadcasted_id)
+        try:
+            self.csr_signature = crypto.sign(raw_bytes, self.signing_key)
+        except AttributeError as ex:
+            raise AttributeError('Signing key not set, cannot create a CSR without it!') from ex
         return raw_bytes + self.csr_signature
+
+class CactuscoinAuthenticationData(AbstractBaseMessage):
+    def __init__(self, csr_id, broadcasted_id, csr_signature, signing_key=None, 
+            broadcast_signature=None):
+        self.csr_id = csr_id
+        self.broadcasted_id = broadcasted_id
+        self.csr_signature = csr_signature
+        self.signing_key = signing_key
+        self.broadcast_signature = broadcast_signature
+
+    @staticmethod
+    def from_bytes(raw_bytes):
+        csr_id, broadcasted_id = struct.unpack('!HH', raw_bytes[:4])
+        csr_signature = raw_bytes[4:SIGNATURE_LENGTH + 4]
+        broadcast_sig_start = SIGNATURE_LENGTH + 4
+        broadcast_sig_end = broadcast_sig_start + SIGNATURE_LENGTH + 4
+        broadcast_signature = raw_bytes[broadcast_sig_start:broadcast_sig_end]
+        return CactuscoinAuthenticationData(csr_id, broadcasted_id, csr_signature, 
+                broadcast_signature=broadcast_signature)
+
+    def to_bytes(self):
+        raw_bytes = struct.pack('!HH', self.csr_id, self.broadcasted_id) + self.csr_signature
+        try:
+            self.broadcast_signature = crypto.sign(raw_bytes, self.signing_key)
+        except AttributeError as ex:
+            raise AttributeError('Signing key not set, cannot create a CAD without it!') from ex
+        return raw_bytes + self.broadcast_signature
+
+    def validate(self, public_keys):
+        signed_bytes = struct.pack('!HH', self.csr_id, self.broadcasted_id)
+        crypto.verify(signed_bytes, self.csr_signature, public_keys[self.csr_id])
+        crypto.verify(signed_bytes + self.csr_signature, self.broadcast_signature, 
+                public_keys[self.broadcasted_id])
 
 class AutomaticTunnelMessage():
     def __init__(self, tunnelled_message):
@@ -76,8 +101,7 @@ class AutomaticTunnelMessage():
         return AutomaticTunnelMessage(tunnelled_message)
 
     def to_bytes(self):
-        print (self.tunnelled_message, len(self.tunnelled_message))
-        return struct.pack('!h', len(self.tunnelled_message)) + self.tunnelled_message
+        return struct.pack('!H', len(self.tunnelled_message)) + self.tunnelled_message
 
 class CactuscoinDataPacket():
     type_mapping = {1:RegistrationUnderBadge,
@@ -87,11 +111,12 @@ class CactuscoinDataPacket():
                     6:AutomaticTunnelMessage,
                    }
 
-    def __init__(self, badge_id, message, version=1):
+    def __init__(self, badge_id, message, version=1, signature=None):
         self.message = message
         self.badge_id = badge_id
         self.version = version
         self.type = self.type_from_object(message)
+        self.signature = signature
 
     @staticmethod
     def from_bytes(raw_bytes, public_keys):
@@ -115,8 +140,8 @@ class CactuscoinDataPacket():
 
     def __repr__(self):
         msg = "CactuscoinDataPacket"
-        msg += "(version={},type={},message={})".format(self.version,
-                self.type, repr(self.message))
+        msg += "(version={},badge_id={},type={},message={})".format(self.version,
+                self.badge_id, self.type, repr(self.message))
         return msg
 
     def type_from_object(self, obj):

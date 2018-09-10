@@ -53,10 +53,12 @@ The CSR message is sent by a badge having seen another badge transmitting a GBP.
      +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
      |             CSR ID            |         Broadcasted ID        |
      +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+     |               Signature by CSR Badge (256 bytes)              |
+     +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
 
 
 ## 4 - Cactuscoin Authentication Data (CAD)
-The CAD message is sent by a badge that has received a CSR from another badge.  It is the final part of establishing a cactuscoin through a proof of presence.  It contains 3 fields, the CSR ID which is the badge id of the badge that saw the inital GBP, the broadcasted ID which is the badge ID that was contained in the GBP, and the RSA signature by the CSR ID both badge IDs .
+The CAD message is sent by a badge that has received a CSR from another badge.  It is the final part of establishing a cactuscoin through a proof of presence.  It contains 4 fields, the CSR ID which is the badge id of the badge that saw the inital GBP, the broadcasted ID which is the badge ID that was contained in the GBP, the RSA signature by the CSR badge, the RSA signature by the broadcast badge (on the badge IDs + CSR signature).
 
 >
       0                   1                   2                   3
@@ -65,6 +67,8 @@ The CAD message is sent by a badge that has received a CSR from another badge.  
      |             CSR ID            |         Broadcasted ID        |
      +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
      |               Signature by CSR Badge (256 bytes)              |
+     +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+     |            Signature by Broadcast Badge (256 bytes)           |
      +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
 
 
@@ -80,7 +84,7 @@ An ATM message is a transport message containing a message from a badge that was
      |                    Tunnelled Badge Message                    |
      +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
 
-## 6 - Some kind of ack message
+## 6 - Some kind of ack message might be useful? TODO
 
 >
       0                   1                   2                   3
