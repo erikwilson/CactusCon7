@@ -73,7 +73,7 @@ The CAD message is sent by a badge that has received a CSR from another badge.  
 
 
 ## 5 - Automatic Tunnel Message (ATM)
-An ATM message is a transport message containing a message from a badge that was received over LoRa by a cactuscoin node.  It contains the 4 fields, the location ID of the node that received the message, the length, the RSA signature by the cactuscoin node of just the location and message length fields, and the encapsulated message being tunneled on behalf of the badge.
+An ATM message is a transport message containing a message from a badge that was received over LoRa by a cactuscoin node.  It contains the 2 fields, the length of the tunnelled message, and the encapsulated message being tunneled on behalf of the badge.
 
 >
       0                   1                   2                   3
