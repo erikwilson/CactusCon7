@@ -42,6 +42,9 @@ def load_public_key_from_file(path):
         return load_public_key(key_file.read())
 
 def sign(msg, private_key):
+    if isinstance(msg, str):
+        msg = msg.encode('utf8')
+
     chosen_hash = hashes.SHA256()
     hasher = hashes.Hash(chosen_hash, default_backend())
     hasher.update(msg)
@@ -54,10 +57,13 @@ def sign(msg, private_key):
         ),
         utils.Prehashed(chosen_hash)
     )
-    #return base64.b64encode(sig).decode('utf8')
-    return sig
+    return base64.b64encode(sig).decode('utf8')    
 
-def verify(msg, sig, public_key):
+def verify(msg, sig64, public_key):
+    if isinstance(msg, str):
+        msg = msg.encode('utf8')
+    
+    sig = base64.b64decode(sig64)
     chosen_hash = hashes.SHA256()
     hasher = hashes.Hash(chosen_hash, default_backend())
     hasher.update(msg)
