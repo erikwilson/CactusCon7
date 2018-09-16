@@ -5,6 +5,7 @@
 #include <SSD1306.h>
 
 #define GBP_BROADCAST_TIME_MS 1000
+#define GBP_RSSI_THRESHOLD -60
 
 #define CDP_VERSION 1
 #define RUP_TYPE_NUMBER 1
@@ -34,6 +35,17 @@ void transmitGBP() {
   sendGBP = false;
 }
 
+
+/*
+ * Obtains the name from the user using the dpad if this badge has never been registered, 
+ * then registers the supplied name for this badge on a cactuscoin node over wifi.
+ */
+void registerBadge(){
+  // turn on wifi
+  // hit badge endpoint on cactuscoin node to determine if this badge already has a registered name with it (if so bail and/or give user option to update name).
+  // ask the user for a name and register with the cactuscoin node.
+}
+
 void setup() {
   // Turn on wifi and check if badge is registered with API
   // if it isn't, call registerBadge (gets name from user and registers)
@@ -42,6 +54,9 @@ void setup() {
   while (!Serial);
 
   Serial.println("CactusCoinBadge v1.0");
+
+  registerBadge();
+  
   LoRa.setPins(18, 14, 26);
   if (!LoRa.begin(433E6)) {
     Serial.println("Starting LoRa failed!");
@@ -68,40 +83,33 @@ void setup() {
 }
 
 void processPacket() {
-    String output = "Received packet '";
-
     // read packet
-    while (LoRa.available()) {
-      output += (char)LoRa.read();
-    }
+    int packetSize = LoRa.available();
+    byte packet[packetSize];
+
+    for (int i = 0; i < packetSize; i++)
+      packet[i] = LoRa.read();
 
     // received a packet
-    //cdp.decodePacket(output);
-    //cdp.
+    cdp.decodePacket(&packet);
     switch (cdp.getType()) {
       case CDP::GBP:
-        
+        if (LoRa.packetRssi() < GBP_RSSI_THRESHOLD)
+          break;
+        LoRa.beginPacket();
+        LoRa.write(cdp.createCoinSigningRequest(&packet));
+        LoRa.endPacket();
         break;
       case CDP::CSR:
-        break
-
+        LoRa.beginPacket();
+        LoRa.write(cdp.signCoinSigningRequest(cdp.getMessage()));
+        LoRa.endPacket();
+        break;
       case CDP::CAD:
         // turn on wifi, report, turn off wifi
-        break
+        reportToCactuscoinNode(cdp.getMessage());
+        break;
     }
-    
-    output += "' with RSSI ";
-    output +=  LoRa.packetRssi();
-    Serial.println(output);
-    
-    display.clear();
-    display.drawStringMaxWidth(0, 0, 128, output);
-    display.display();
-
-  // read entire packet
-  // is the packet a GBP? if we haven't paired before and RSSI < 50, send a CSR
-  // is packet a CSR? if so, respond with CAD
-  // all other, log and return
 }
 
 void loop() {
@@ -111,7 +119,9 @@ void loop() {
     processPacket();
   }
 
-  if (sendGBP)
-    transmitGBP();
+  if (sendGBP) {
+    cdp.setType(CDP::GBP);
+    cdp.setBadgeID(myBadgeID);
+  }
   
 }
