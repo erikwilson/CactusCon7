@@ -4,46 +4,16 @@
 #include <LoRa.h>
 #include <SSD1306.h>
 
-#define GBP_BROADCAST_TIME_MS 1000
-#define GBP_RSSI_THRESHOLD -60
-
-#define CDP_VERSION 1
-#define RUP_TYPE_NUMBER 1
-#define GBP_TYPE_NUMBER 2
+#include "config.h"
 
 SSD1306 display(0x3c, 4, 15);
 Ticker gbpTimer;
 int counter = 0;
-int myBadgeID = 1;
+uint16_t myBadgeID = 1;
 bool sendGBP = false;
 
 void triggerGBP() {
   sendGBP = true;
-}
-
-void transmitGBP() {
-  byte lowID = myBadgeID;
-  byte highID = myBadgeID >> 8;
-  byte packet[4] = {CDP_VERSION, highID, lowID, GBP_TYPE_NUMBER};
-  LoRa.beginPacket();
-  //LoRa.write(packet, sizeof(packet));
-  LoRa.print("hello ");
-  LoRa.print(counter);
-  LoRa.endPacket(true);
-  Serial.println("Sent GPB");
-  counter += 1;
-  sendGBP = false;
-}
-
-
-/*
- * Obtains the name from the user using the dpad if this badge has never been registered, 
- * then registers the supplied name for this badge on a cactuscoin node over wifi.
- */
-void registerBadge(){
-  // turn on wifi
-  // hit badge endpoint on cactuscoin node to determine if this badge already has a registered name with it (if so bail and/or give user option to update name).
-  // ask the user for a name and register with the cactuscoin node.
 }
 
 void setup() {
@@ -79,35 +49,32 @@ void setup() {
   display.setTextAlignment(TEXT_ALIGN_LEFT);
   display.clear();
 
-  gbpTimer.attach(30, triggerGBP);
+  gbpTimer.attach(BROADCAST_TIME_SEC, triggerGBP);
 }
 
 void processPacket() {
     // read packet
     int packetSize = LoRa.available();
+    int packetRssi = LoRa.packetRssi();
     byte packet[packetSize];
+    byte *packetPtr = &packet[1];
 
     for (int i = 0; i < packetSize; i++)
       packet[i] = LoRa.read();
 
     // received a packet
-    cdp.decodePacket(&packet);
-    switch (cdp.getType()) {
-      case CDP::GBP:
-        if (LoRa.packetRssi() < GBP_RSSI_THRESHOLD)
-          break;
-        LoRa.beginPacket();
-        LoRa.write(cdp.createCoinSigningRequest(&packet));
-        LoRa.endPacket();
+    switch (packet[0]) {
+      case CDP_GLOBALBROADCAST_TYPE:
+        transmitCoinSigningRequest(myBadgeID, packetPtr, packetSize);
         break;
-      case CDP::CSR:
-        LoRa.beginPacket();
-        LoRa.write(cdp.signCoinSigningRequest(cdp.getMessage()));
-        LoRa.endPacket();
+      case CDP_COINSIGNINGREQUEST_TYPE:
+        transmitSignedCoin(myBadgeID, packetPtr, packetSize);
+        //cdp.createSignedCoin(cdp.getMessage());
         break;
-      case CDP::CAD:
+      case CDP_SIGNEDCOIN_TYPE:
         // turn on wifi, report, turn off wifi
-        reportToCactuscoinNode(cdp.getMessage());
+        //reportToCactuscoinNode(cdp.getMessage());
+        // submit multiple coins
         break;
     }
 }
@@ -120,8 +87,8 @@ void loop() {
   }
 
   if (sendGBP) {
-    cdp.setType(CDP::GBP);
-    cdp.setBadgeID(myBadgeID);
+    transmitGlobalBroadcast(myBadgeID);
+    sendGBP = false;
   }
   
 }
