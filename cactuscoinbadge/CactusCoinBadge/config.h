@@ -5,3 +5,4 @@
 
 #define BROADCAST_TIME_SEC 10
 #define CSR_RSSI_THRESHOLD -70
+#define BADGE_TX_POWER 1

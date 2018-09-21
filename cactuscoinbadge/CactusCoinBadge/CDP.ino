@@ -1,3 +1,5 @@
+#include <ArduinoJson.h>
+
 typedef struct GlobalBroadcast {
   uint16_t badgeID;  
 };
@@ -17,29 +19,66 @@ typedef struct SignedCoin {
   byte signatureBroadcaster[CDP_MODULUS_SIZE];
 };
 
+int submitCoin(uint16_t myBadgeID, byte *scnPtr, int packetSize) {
+  SignedCoin *scn;
+  if ((packetSize - 1) != sizeof(SignedCoin)) {  // subtract 1 to account for type byte
+    Serial.print("SignedCoin was an invalid length of ");
+    Serial.println(packetSize);
+    return -1;
+  }
+
+  scn = (SignedCoin *)scnPtr;
+  
+  WiFi.mode(WIFI_STA);
+  WiFi.begin(WLAN_SSID, WLAN_PASSWD);
+
+  while (WiFi.status() != WL_CONNECTED) {
+    delay(500);
+    Serial.print(".");
+  }
+  
+  IPAddress ip = WiFi.localIP();
+  Serial.println(ip);
+  
+  StaticJsonBuffer<200> jsonBuffer;
+  JsonObject& root = jsonBuffer.createObject();
+  root["CSRID"] = scn->csr.coin.CSRID;
+  root["broadcasterID"] = scn->csr.coin.broadcasterID;
+  root["signatureCSR"] = scn->csr.signatureCSR;
+  root["signatureBroadcaster"] = scn->signatureBroadcaster;
+  root.printTo(Serial);
+  Serial.println();
+
+  WiFi.mode(WIFI_OFF);
+}
+
 int transmitSignedCoin(uint16_t myBadgeID, byte *csrPtr, int packetSize) {
+  CoinSigningRequest *csr;
+  
   if ((packetSize - 1) != sizeof(CoinSigningRequest)) {  // subtract 1 to account for type byte
     Serial.print("CoinSigningRequest was an invalid length of ");
     Serial.println(packetSize);
     return -1;
   }
   
-  CoinSigningRequest *csr = (CoinSigningRequest *)csrPtr;
+  csr = (CoinSigningRequest *)csrPtr;
   
   if (csr->coin.broadcasterID != myBadgeID) {
     Serial.print("Ignoring CSR, it was intended for badge #");
     Serial.print(csr->coin.broadcasterID);
     Serial.print(" and my badge is #");
-    Serial.println(myBadgeID);
+    Serial.println(csr->coin.broadcasterID);
     return -1;
   }
   
   SignedCoin signedCoin;
   signedCoin.csr = *csr;
-  //signedCoin.signatureBroadcaster = 
+  signedCoin.signatureBroadcaster[0] = 0x02;
   
   Serial.print("Signing CSR for Badge #");
-  Serial.println(csr->coin.CSRID);
+  Serial.print(csr->coin.CSRID);
+  Serial.print(" and my badge is #");
+  Serial.println(myBadgeID);
   LoRa.beginPacket();
   LoRa.write(CDP_SIGNEDCOIN_TYPE);
   LoRa.write((byte *)&signedCoin, sizeof(signedCoin));
@@ -47,7 +86,11 @@ int transmitSignedCoin(uint16_t myBadgeID, byte *csrPtr, int packetSize) {
 }
 
 int transmitCoinSigningRequest(uint16_t myBadgeID, byte *gbpPtr, int packetSize) {
+  GlobalBroadcast *gbp;
+  CoinSigningRequest csr;
+  Coin coin;
   int packetRssi = LoRa.packetRssi();
+  
   if (packetRssi < CSR_RSSI_THRESHOLD) {
       Serial.print("Ignoring broadcast RSSI (");
       Serial.print(packetRssi);
@@ -61,16 +104,17 @@ int transmitCoinSigningRequest(uint16_t myBadgeID, byte *gbpPtr, int packetSize)
     return -1;
   }
     
-  GlobalBroadcast *gbp = (GlobalBroadcast *)gbpPtr;
-  Coin coin;
+  gbp = (GlobalBroadcast *)gbpPtr;
   coin.CSRID = myBadgeID;
-  coin.broadcasterID;
-  CoinSigningRequest csr;
+  coin.broadcasterID = gbp->badgeID;
   csr.coin = coin;
+  csr.signatureCSR[0] = 0x01;
   // csr->signatureCSR = we'll just leak some random bits for now
   
   Serial.print("Generating CSR for Badge #");
-  Serial.println(gbp->badgeID);
+  Serial.print(gbp->badgeID);
+  Serial.print(" my badge #");
+  Serial.println(csr.coin.CSRID);
   LoRa.beginPacket();
   LoRa.write(CDP_COINSIGNINGREQUEST_TYPE);
   LoRa.write((byte *)&csr, sizeof(csr));

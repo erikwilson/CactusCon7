@@ -2,9 +2,12 @@
 
 #include <SPI.h>
 #include <LoRa.h>
+#include <WiFi.h>
 #include <SSD1306.h>
+//#include "mbedtls/pk.h"
 
 #include "config.h"
+#include "credentials.h"
 
 SSD1306 display(0x3c, 4, 15);
 Ticker gbpTimer;
@@ -25,14 +28,23 @@ void setup() {
 
   Serial.println("CactusCoinBadge v1.0");
 
+  WiFi.mode(WIFI_OFF);
+  btStop();
+
   registerBadge();
+  //byte addr[6];
+  //WiFi.macAddress(addr);
+  //Serial.printf("%08X\n",(uint16_t)chipid & 0xFF);
+  //myBadgeID = (uint16_t)(addr[6]);
+  //Serial.printf("My Badge ID %d", myBadgeID);
+  myBadgeID = random(2000);
   
   LoRa.setPins(18, 14, 26);
   if (!LoRa.begin(433E6)) {
     Serial.println("Starting LoRa failed!");
     while (1);
   }
-  LoRa.setTxPower(1);
+  LoRa.setTxPower(BADGE_TX_POWER);
   Serial.println("LoRa started...");
 
   pinMode(16, OUTPUT);
@@ -50,6 +62,10 @@ void setup() {
   display.clear();
 
   gbpTimer.attach(BROADCAST_TIME_SEC, triggerGBP);
+  String output = "My Badge ID: ";
+  output += myBadgeID;
+  display.drawStringMaxWidth(0, 0, 128, output);
+  display.display();
 }
 
 void processPacket() {
@@ -69,11 +85,10 @@ void processPacket() {
         break;
       case CDP_COINSIGNINGREQUEST_TYPE:
         transmitSignedCoin(myBadgeID, packetPtr, packetSize);
-        //cdp.createSignedCoin(cdp.getMessage());
         break;
       case CDP_SIGNEDCOIN_TYPE:
         // turn on wifi, report, turn off wifi
-        //reportToCactuscoinNode(cdp.getMessage());
+        submitCoin(myBadgeID, packetPtr, packetSize);
         // submit multiple coins
         break;
     }
