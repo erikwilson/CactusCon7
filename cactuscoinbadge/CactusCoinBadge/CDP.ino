@@ -49,6 +49,11 @@ int submitCoin(uint16_t myBadgeID, byte *scnPtr, int packetSize) {
   root.printTo(Serial);
   Serial.println();
 
+  /*
+  HTTPClient http;
+  http.begin("http://www.mywebpage.com/php_page.php");
+  http.addHeader("Content-Type", "application/json");
+  http.POST(root.);*/
   WiFi.mode(WIFI_OFF);
 }
 
