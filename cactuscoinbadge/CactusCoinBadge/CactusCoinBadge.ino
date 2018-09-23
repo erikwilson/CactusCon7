@@ -1,5 +1,6 @@
+#include <HTTPClient.h>
+#include <SPIFFS.h>
 #include <Ticker.h>
-
 #include <SPI.h>
 #include <LoRa.h>
 #include <WiFi.h>
@@ -12,7 +13,7 @@
 SSD1306 display(0x3c, 4, 15);
 Ticker gbpTimer;
 int counter = 0;
-uint16_t myBadgeID = 1;
+uint16_t myBadgeID = 0;
 bool sendGBP = false;
 
 void triggerGBP() {
@@ -20,24 +21,29 @@ void triggerGBP() {
 }
 
 void setup() {
-  // Turn on wifi and check if badge is registered with API
-  // if it isn't, call registerBadge (gets name from user and registers)
-  // if it is, get the list of coined badges.
   Serial.begin(115200);
   while (!Serial);
-
   Serial.println("CactusCoinBadge v1.0");
 
   WiFi.mode(WIFI_OFF);
   btStop();
 
+  if(!SPIFFS.begin(true)) {
+    Serial.println("Failed to start SPIFFS!");
+    return;
+  }
+  
+  File f = SPIFFS.open("/my.id", "r");
+  
+  if (!f) {
+    Serial.println("Failed to open badge ID");
+    return;
+  }
+  else {
+    myBadgeID = f.read() - '0';
+  }
+  
   registerBadge();
-  //byte addr[6];
-  //WiFi.macAddress(addr);
-  //Serial.printf("%08X\n",(uint16_t)chipid & 0xFF);
-  //myBadgeID = (uint16_t)(addr[6]);
-  //Serial.printf("My Badge ID %d", myBadgeID);
-  myBadgeID = random(2000);
   
   LoRa.setPins(18, 14, 26);
   if (!LoRa.begin(433E6)) {
