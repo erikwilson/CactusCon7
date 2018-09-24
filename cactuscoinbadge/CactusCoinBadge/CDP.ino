@@ -39,15 +39,15 @@ int submitCoin(uint16_t myBadgeID, byte *scnPtr, int packetSize) {
   
   IPAddress ip = WiFi.localIP();
   Serial.println(ip);
-  
-  StaticJsonBuffer<200> jsonBuffer;
+
+  /*
   JsonObject& root = jsonBuffer.createObject();
   root["CSRID"] = scn->csr.coin.CSRID;
   root["broadcasterID"] = scn->csr.coin.broadcasterID;
   root["signatureCSR"] = scn->csr.signatureCSR;
   root["signatureBroadcaster"] = scn->signatureBroadcaster;
   root.printTo(Serial);
-  Serial.println();
+  Serial.println();*/
 
   /*
   HTTPClient http;

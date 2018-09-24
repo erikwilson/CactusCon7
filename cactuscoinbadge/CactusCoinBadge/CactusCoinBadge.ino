@@ -5,7 +5,12 @@
 #include <LoRa.h>
 #include <WiFi.h>
 #include <SSD1306.h>
-//#include "mbedtls/pk.h"
+#include "mbedtls/pk.h"
+#include "mbedtls/error.h"
+#include "mbedtls/entropy.h"
+#include "mbedtls/ctr_drbg.h"
+#include "mbedtls/md.h"
+#include "mbedtls/sha256.h"
 
 #include "config.h"
 #include "credentials.h"
@@ -15,6 +20,10 @@ Ticker gbpTimer;
 int counter = 0;
 uint16_t myBadgeID = 0;
 bool sendGBP = false;
+mbedtls_pk_context badgePK;
+mbedtls_pk_context nodePK;
+mbedtls_entropy_context entropy;
+mbedtls_ctr_drbg_context ctr_drbg;
 
 void triggerGBP() {
   sendGBP = true;
@@ -28,21 +37,12 @@ void setup() {
   WiFi.mode(WIFI_OFF);
   btStop();
 
-  if(!SPIFFS.begin(true)) {
-    Serial.println("Failed to start SPIFFS!");
+  if (!setupFS())
     return;
-  }
-  
-  File f = SPIFFS.open("/my.id", "r");
-  
-  if (!f) {
-    Serial.println("Failed to open badge ID");
+
+  if (!setupCrypto())
     return;
-  }
-  else {
-    myBadgeID = f.read() - '0';
-  }
-  
+    
   registerBadge();
   
   LoRa.setPins(18, 14, 26);
@@ -58,9 +58,10 @@ void setup() {
   delay(50);
   digitalWrite(16, HIGH); // while OLED is running, must set GPIO16 in high
 
+  /*
   pinMode(38, INPUT);
   analogSetAttenuation(ADC_11db);
-  analogReadResolution(11);
+  analogReadResolution(11);*/
 
   display.init();
   display.flipScreenVertically();
@@ -68,6 +69,7 @@ void setup() {
   display.clear();
 
   gbpTimer.attach(BROADCAST_TIME_SEC, triggerGBP);
+  
   String output = "My Badge ID: ";
   output += myBadgeID;
   display.drawStringMaxWidth(0, 0, 128, output);
@@ -75,9 +77,7 @@ void setup() {
 }
 
 void processPacket() {
-    // read packet
     int packetSize = LoRa.available();
-    int packetRssi = LoRa.packetRssi();
     byte packet[packetSize];
     byte *packetPtr = &packet[1];
 
@@ -90,10 +90,12 @@ void processPacket() {
         transmitCoinSigningRequest(myBadgeID, packetPtr, packetSize);
         break;
       case CDP_COINSIGNINGREQUEST_TYPE:
+        // write local + jsonify
         transmitSignedCoin(myBadgeID, packetPtr, packetSize);
+        // submit http
         break;
       case CDP_SIGNEDCOIN_TYPE:
-        // turn on wifi, report, turn off wifi
+        // write local + jsonify
         submitCoin(myBadgeID, packetPtr, packetSize);
         // submit multiple coins
         break;
