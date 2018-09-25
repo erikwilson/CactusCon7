@@ -1,141 +1,140 @@
 #include <ArduinoJson.h>
 
-typedef struct GlobalBroadcast {
-  uint16_t badgeID;  
-};
-
-typedef struct Coin {
-  uint16_t CSRID;
-  uint16_t broadcasterID;
-};
-
-typedef struct CoinSigningRequest {
-  Coin coin;
-  byte signatureCSR[CDP_MODULUS_SIZE];
-};
-
-typedef struct SignedCoin {
-  CoinSigningRequest csr;
-  byte signatureBroadcaster[CDP_MODULUS_SIZE];
-};
-
-int submitCoin(uint16_t myBadgeID, byte *scnPtr, int packetSize) {
-  SignedCoin *scn;
-  if ((packetSize - 1) != sizeof(SignedCoin)) {  // subtract 1 to account for type byte
-    Serial.print("SignedCoin was an invalid length of ");
-    Serial.println(packetSize);
-    return -1;
-  }
-
-  scn = (SignedCoin *)scnPtr;
-  
-  WiFi.mode(WIFI_STA);
-  WiFi.begin(WLAN_SSID, WLAN_PASSWD);
-
-  while (WiFi.status() != WL_CONNECTED) {
-    delay(500);
-    Serial.print(".");
-  }
-  
-  IPAddress ip = WiFi.localIP();
-  Serial.println(ip);
-
-  /*
-  JsonObject& root = jsonBuffer.createObject();
-  root["CSRID"] = scn->csr.coin.CSRID;
-  root["broadcasterID"] = scn->csr.coin.broadcasterID;
-  root["signatureCSR"] = scn->csr.signatureCSR;
-  root["signatureBroadcaster"] = scn->signatureBroadcaster;
-  root.printTo(Serial);
-  Serial.println();*/
-
-  /*
-  HTTPClient http;
-  http.begin("http://www.mywebpage.com/php_page.php");
-  http.addHeader("Content-Type", "application/json");
-  http.POST(root.);*/
-  WiFi.mode(WIFI_OFF);
-}
-
-int transmitSignedCoin(uint16_t myBadgeID, byte *csrPtr, int packetSize) {
+bool transmitSignedCoin(uint16_t myBadgeID, byte *csrPtr, int packetSize) {
+  SignedCoin signedCoin;
   CoinSigningRequest *csr;
-  
-  if ((packetSize - 1) != sizeof(CoinSigningRequest)) {  // subtract 1 to account for type byte
-    Serial.print("CoinSigningRequest was an invalid length of ");
-    Serial.println(packetSize);
-    return -1;
-  }
+  String json;
   
   csr = (CoinSigningRequest *)csrPtr;
   
   if (csr->coin.broadcasterID != myBadgeID) {
-    Serial.print("Ignoring CSR, it was intended for badge #");
-    Serial.print(csr->coin.broadcasterID);
-    Serial.print(" and my badge is #");
+    Serial.print("Ignoring CSR, it was not intended for me and instead was for badge #");
     Serial.println(csr->coin.broadcasterID);
-    return -1;
+    return false;
   }
-  
-  SignedCoin signedCoin;
+
   signedCoin.csr = *csr;
   signedCoin.signatureBroadcaster[0] = 0x02;
-  
-  Serial.print("Signing CSR for Badge #");
-  Serial.print(csr->coin.CSRID);
-  Serial.print(" and my badge is #");
-  Serial.println(myBadgeID);
+
+  json = jsonifySignedCoin((byte *)&signedCoin, sizeof(signedCoin));
+  storeUnsentSignedCoinOnFS(csr->coin.broadcasterID, json);  // mother of all hacks, this should really be in main
+  submitSignedCoinToAPI(json);
+
+  Serial.print("Transmitting signed coin to badge #");
+  Serial.println(signedCoin.csr.coin.CSRID);
   LoRa.beginPacket();
   LoRa.write(CDP_SIGNEDCOIN_TYPE);
   LoRa.write((byte *)&signedCoin, sizeof(signedCoin));
   LoRa.endPacket();
+
+  return true;
 }
 
-int transmitCoinSigningRequest(uint16_t myBadgeID, byte *gbpPtr, int packetSize) {
+bool transmitCoinSigningRequest(uint16_t myBadgeID, byte *gbpPtr, int packetSize) {
   GlobalBroadcast *gbp;
   CoinSigningRequest csr;
   Coin coin;
   int packetRssi = LoRa.packetRssi();
   
-  if (packetRssi < CSR_RSSI_THRESHOLD) {
-      Serial.print("Ignoring broadcast RSSI (");
-      Serial.print(packetRssi);
-      Serial.println(") below threshold");
-      return -1;
-  }
-  
   if ((packetSize - 1) != sizeof(GlobalBroadcast)) {  // subtract 1 to account for type byte
     Serial.print("GlobalBroadcast was an invalid length of ");
     Serial.println(packetSize);
-    return -1;
+    return false;
   }
     
   gbp = (GlobalBroadcast *)gbpPtr;
+
+  if (packetRssi < CSR_RSSI_THRESHOLD) {
+      Serial.print("Ignoring broadcast from badge #");
+      Serial.print(gbp->badgeID);
+      Serial.print(" RSSI is too weak.. ");
+      Serial.println(packetRssi);
+      return false;
+  }
+
+  if (ifCoinExistsOnFS(gbp->badgeID)) {  // this is just getting stupid messy at this point
+      Serial.print("Coin already exists ignoring broadcast from badge ");
+      Serial.println(gbp->badgeID);
+      return false;
+  }
+  
   coin.CSRID = myBadgeID;
   coin.broadcasterID = gbp->badgeID;
   csr.coin = coin;
   csr.signatureCSR[0] = 0x01;
-  // csr->signatureCSR = we'll just leak some random bits for now
   
-  Serial.print("Generating CSR for Badge #");
-  Serial.print(gbp->badgeID);
-  Serial.print(" my badge #");
-  Serial.println(csr.coin.CSRID);
+  Serial.print("Generating CSR for badge #");
+  Serial.println(gbp->badgeID);
   LoRa.beginPacket();
   LoRa.write(CDP_COINSIGNINGREQUEST_TYPE);
   LoRa.write((byte *)&csr, sizeof(csr));
   LoRa.endPacket();
+
+  return true;
 }
 
 void transmitGlobalBroadcast(uint16_t myBadgeID) {
   GlobalBroadcast gbp;
   gbp.badgeID = myBadgeID;
   
-  Serial.println("Transmitting broadcast");
+  Serial.print("Transmitting broadcast with my badge #");
+  Serial.println(gbp.badgeID);
   LoRa.beginPacket();
   LoRa.write(CDP_GLOBALBROADCAST_TYPE);
   LoRa.write((byte *)&gbp, sizeof(gbp));
   LoRa.endPacket();
 }
 
+bool isValidGlobalBroadcast(byte *gbpPtr, int packetSize) {
+  if ((packetSize - 1) != sizeof(GlobalBroadcast)) {  // subtract 1 to account for type byte
+    Serial.print("GlobalBroadcast was an invalid length of ");
+    Serial.println(packetSize);
+    return false;
+  }
+  true;
+}
 
+bool isValidCoinSigningRequest(byte *csrPtr, int packetSize) {
+  if ((packetSize - 1) != sizeof(CoinSigningRequest)) {  // subtract 1 to account for type byte
+    Serial.print("CoinSigningRequest was an invalid length of ");
+    Serial.println(packetSize);
+    return false;
+  }
+  return true;
+}
+
+bool isValidSignedCoin(byte *scnPtr, int packetSize) {
+  if ((packetSize - 1) != sizeof(SignedCoin)) {  // subtract 1 to account for type byte
+    Serial.print("SignedCoin was an invalid length of ");
+    Serial.println(packetSize);
+    return false;
+  }
+  return true;
+}
+
+uint16_t getCSRIDFromBytes(byte *scnPtr, int packetSize) {
+  // This entire function is a 1am mother fucking hack.
+  SignedCoin *scn = (SignedCoin *)scnPtr;
+  return scn->csr.coin.CSRID;
+}
+
+uint16_t getBroadcasterIDFromBytes(byte *scnPtr, int packetSize) {
+  // This entire function is a 1am mother fucking hack.
+  SignedCoin *scn = (SignedCoin *)scnPtr;
+  return scn->csr.coin.broadcasterID;
+}
+
+String jsonifySignedCoin(byte *scnPtr, int packetSize) {
+  SignedCoin *scn = (SignedCoin *)scnPtr;
+  String jsonString;
+  
+  StaticJsonBuffer<200> jsonBuffer;
+  JsonObject &root = jsonBuffer.createObject();
+  root["CSRID"] = scn->csr.coin.CSRID;
+  root["broadcasterID"] = scn->csr.coin.broadcasterID;
+  root["signatureCSR"] = scn->csr.signatureCSR;
+  root["signatureBroadcaster"] = scn->signatureBroadcaster;
+  root.printTo(jsonString);
+  return jsonString;
+}
 

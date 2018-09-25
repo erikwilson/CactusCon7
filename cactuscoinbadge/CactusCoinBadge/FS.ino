@@ -1,40 +1,51 @@
-int setupFS() {
+bool setupFS() {
   if(!SPIFFS.begin(true)) {
     Serial.println("Failed to start SPIFFS!");
-    return -1;
+    return false;
   }
   
   File f = SPIFFS.open("/my.id", "r");
   
   if (!f) {
     Serial.println("Failed to open badge ID");
-    return -1;
+    return false;
   }
   else {
     myBadgeID = f.read() - '0';
   }
 
-  return 0;
+  return true;
 }
 
-String jsonifyCoin(byte *scnPtr, int packetSize) {
-  SignedCoin *scn;
-  String jsonString;
-  StaticJsonBuffer<200> jsonBuffer;
+bool ifCoinExistsOnFS(int badgeID) {
+  char coinPath[255];
+  sprintf(coinPath, "/coins/%d", badgeID);
+  Serial.print("Checking if coin exists at ");
+  Serial.println(coinPath);
+  return SPIFFS.exists(coinPath);
+}
+
+bool storeUnsentSignedCoinOnFS(int badgeID, String json) {
+  char coinPath[255];
+  sprintf(coinPath, "/coins/%d", badgeID);
   
-  if ((packetSize - 1) != sizeof(SignedCoin)) {  // subtract 1 to account for type byte
-    Serial.print("SignedCoin was an invalid length of ");
-    Serial.println(packetSize);
-    return "";
+  Serial.print("Writing coin out to ");
+  Serial.println(coinPath);
+  File f = SPIFFS.open(coinPath, "w");
+  
+  if (!f) {
+    Serial.print("Failed to open coin for writing on FS.. ");
+    Serial.println(coinPath);
+    return false;
   }
 
-  scn = (SignedCoin *)scnPtr;
-  
-  JsonObject &root = jsonBuffer.createObject();
-  root["CSRID"] = scn->csr.coin.CSRID;
-  root["broadcasterID"] = scn->csr.coin.broadcasterID;
-  root["signatureCSR"] = scn->csr.signatureCSR;
-  root["signatureBroadcaster"] = scn->signatureBroadcaster;
-  root.printTo(jsonString);
-  return jsonString;
+  if (f.print(json)) {
+    f.close();
+  } else {
+    Serial.print("Failed to write coin file on FS.. ");
+    Serial.println(coinPath);
+    return false;
+  }
+  return true;
 }
+

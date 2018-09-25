@@ -14,6 +14,7 @@
 
 #include "config.h"
 #include "credentials.h"
+#include "CDP.h"
 
 SSD1306 display(0x3c, 4, 15);
 Ticker gbpTimer;
@@ -34,9 +35,6 @@ void setup() {
   while (!Serial);
   Serial.println("CactusCoinBadge v1.0");
 
-  WiFi.mode(WIFI_OFF);
-  btStop();
-
   if (!setupFS())
     return;
 
@@ -44,6 +42,9 @@ void setup() {
     return;
     
   registerBadge();
+
+  WiFi.mode(WIFI_OFF);
+  btStop();
   
   LoRa.setPins(18, 14, 26);
   if (!LoRa.begin(433E6)) {
@@ -57,11 +58,6 @@ void setup() {
   digitalWrite(16, LOW);    // set GPIO16 low to reset OLED
   delay(50);
   digitalWrite(16, HIGH); // while OLED is running, must set GPIO16 in high
-
-  /*
-  pinMode(38, INPUT);
-  analogSetAttenuation(ADC_11db);
-  analogReadResolution(11);*/
 
   display.init();
   display.flipScreenVertically();
@@ -80,6 +76,9 @@ void processPacket() {
     int packetSize = LoRa.available();
     byte packet[packetSize];
     byte *packetPtr = &packet[1];
+    String json;
+    uint16_t broadcasterID;
+    SignedCoin signedCoin;
 
     for (int i = 0; i < packetSize; i++)
       packet[i] = LoRa.read();
@@ -87,18 +86,31 @@ void processPacket() {
     // received a packet
     switch (packet[0]) {
       case CDP_GLOBALBROADCAST_TYPE:
-        transmitCoinSigningRequest(myBadgeID, packetPtr, packetSize);
+        if (isValidGlobalBroadcast(packetPtr, packetSize))
+          transmitCoinSigningRequest(myBadgeID, packetPtr, packetSize);
+          
         break;
+        
       case CDP_COINSIGNINGREQUEST_TYPE:
-        // write local + jsonify
-        transmitSignedCoin(myBadgeID, packetPtr, packetSize);
-        // submit http
+        if (isValidCoinSigningRequest(packetPtr, packetSize)) {
+          transmitSignedCoin(myBadgeID, packetPtr, packetSize);
+        }
+        //if (!generateSignedCoin(myBadgeID, packetPtr, packetSize, signedCoin))
+        //  break;  
+        //json = jsonifySignedCoin(&signedCoin);
+        //Serial.println(json);
+        //storeUnsentSignedCoinOnFS(signedCoin.csr.coin.broadcasterID, json);
+        //transmitSignedCoin(myBadgeID, packetPtr, packetSize);
+        //submitSignedCoinToAPI(json);
         break;
+        
       case CDP_SIGNEDCOIN_TYPE:
-        // write local + jsonify
-        submitCoin(myBadgeID, packetPtr, packetSize);
-        // submit multiple coins
-        break;
+        if (isValidSignedCoin(packetPtr, packetSize)) {
+          json = jsonifySignedCoin(packetPtr, packetSize);
+          broadcasterID = getBroadcasterIDFromBytes(packetPtr, packetSize);
+          storeUnsentSignedCoinOnFS(broadcasterID, json);
+          submitSignedCoinToAPI(json);
+        }
     }
 }
 

@@ -1,5 +1,5 @@
 
-int setupCrypto() {
+bool setupCrypto() {
   int ret;
   const char *pers = "mbedtls_pk_sign";
   mbedtls_pk_init(&badgePK);
@@ -10,13 +10,13 @@ int setupCrypto() {
   if ((ret = mbedtls_pk_parse_keyfile(&badgePK, "/spiffs/private.pem", "")) != 0) {
     Serial.printf("Failed to load badge private key, error code: -0x%04x\n", -ret);
     teardownCrypto();
-    return -1;
+    return false;
   }
   
   if ((ret = mbedtls_pk_parse_public_keyfile(&nodePK, "/spiffs/cactuscoinapi.pem") ) != 0) {
     Serial.printf("Failed to load cactuscoinapi public key, error code: -0x%04x\n", -ret);
     teardownCrypto();
-    return -1;
+    return false;
   }
   
   if( ( ret = mbedtls_ctr_drbg_seed( &ctr_drbg, mbedtls_entropy_func, &entropy,
@@ -25,9 +25,10 @@ int setupCrypto() {
   {
     Serial.printf("Failed to seed the random number generator , error code: -0x%04x\n", -ret);
     teardownCrypto();
-    return -1;
+    return false;
   }
 
+  return true;
 }
 
 void teardownCrypto() {
