@@ -18,6 +18,7 @@
 
 SSD1306 display(0x3c, 4, 15);
 Ticker gbpTimer;
+Ticker TXLogTimer;
 int coinCounter = 0;
 uint16_t myBadgeID = 0;
 char myName[MAX_NAME_LENGTH] = "cybaix";
@@ -71,8 +72,13 @@ void setup() {
   display.clear();
 
   gbpTimer.attach(BROADCAST_TIME_SEC, triggerGBP);
-  gbpTimer.attach(TXLOG_FLUSH_SEC, triggerPendingTXLogFlush);
+  TXLogTimer.attach(TXLOG_FLUSH_SEC, triggerPendingTXLogFlush);
   
+  updateDisplay();
+}
+
+void updateDisplay() {
+  display.clear();
   String output = "Badge ID: ";
   output += myBadgeID;
   display.drawStringMaxWidth(0, 0, 128, output);
@@ -145,4 +151,6 @@ void loop() {
     drainSignedCoinPendingTXLogOnFS();
     TXLogFlush = false;
   }
+
+  updateDisplay();
 }

@@ -28,6 +28,12 @@ bool ifCoinExistsOnFS(uint16_t badgeID) {
 bool storeUnsentSignedCoinOnFS(int otherBadgeID, String json) {
   char coinPath[255];
   sprintf(coinPath, "/coins/%d", otherBadgeID);
+
+  if (SPIFFS.exists(coinPath)) {
+    Serial.print("Skipping this write, already got a coin at..");
+    Serial.println(coinPath);
+    return true;
+  }
   
   Serial.print("Writing coin out to ");
   Serial.println(coinPath);
@@ -60,12 +66,15 @@ bool appendSignedCoinOnPendingTXLogOnFS(uint16_t otherBadgeID) {
   char num[6];
   sprintf(num, "%d", otherBadgeID);
   File f = SPIFFS.open(UNSUBMITTED_COIN_PATH, "a");
+
+  if (ifCoinExistsOnFS(otherBadgeID))
+    return true;
   
   if (!f)
     return false;
     
   Serial.print("Another coin rides the bus... appended to pending txlog.. badge #");
-  Serial.println(otherBadgeID);
+  Serial.println(num);
   
   f.println(num);
   f.close();
@@ -74,7 +83,7 @@ bool appendSignedCoinOnPendingTXLogOnFS(uint16_t otherBadgeID) {
 }
 
 void drainSignedCoinPendingTXLogOnFS() {
-  char path[255];
+  String path;
   String otherBadgeID;
   Serial.println("Attempting a pending coin TX log flush");
   File tmpTXLog = SPIFFS.open("/tmp/txlog.tmp", "w");
@@ -82,7 +91,11 @@ void drainSignedCoinPendingTXLogOnFS() {
   
   while (TXLog.available()) {
     otherBadgeID = TXLog.readStringUntil('\n');
-    sprintf(path, "/coins/", otherBadgeID);
+    otherBadgeID.trim();
+    //sprintf(path, "/coins/%s", otherBadgeID);
+    path = "/coins/" + otherBadgeID;
+    Serial.print("Trying to submit coin at ");
+    Serial.println(path);
     File coinFile = SPIFFS.open(path, "r");
     
     if (!coinFile) {

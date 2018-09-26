@@ -3,6 +3,7 @@
 bool transmitSignedCoin(uint16_t myBadgeID, byte *csrPtr, int packetSize) {
   SignedCoin signedCoin;
   CoinSigningRequest *csr;
+  size_t signatureLen = 0;
   String json;
   
   csr = (CoinSigningRequest *)csrPtr;
@@ -14,7 +15,8 @@ bool transmitSignedCoin(uint16_t myBadgeID, byte *csrPtr, int packetSize) {
   }
 
   signedCoin.csr = *csr;
-  signedCoin.signatureBroadcaster[0] = 0x02;
+  //signedCoin.signatureBroadcaster[0] = 0x02;
+  sign(csrPtr, sizeof(csr), signedCoin.signatureBroadcaster, &signatureLen);
 
   json = jsonifySignedCoin((byte *)&signedCoin, sizeof(signedCoin));
   storeUnsentSignedCoinOnFS(csr->coin.broadcasterID, json);  // mother of all hacks, this should really be in main
@@ -34,6 +36,7 @@ bool transmitCoinSigningRequest(uint16_t myBadgeID, byte *gbpPtr, int packetSize
   GlobalBroadcast *gbp;
   CoinSigningRequest csr;
   Coin coin;
+  size_t signatureLen = 0;
   int packetRssi = LoRa.packetRssi();
   
   if ((packetSize - 1) != sizeof(GlobalBroadcast)) {  // subtract 1 to account for type byte
@@ -61,7 +64,8 @@ bool transmitCoinSigningRequest(uint16_t myBadgeID, byte *gbpPtr, int packetSize
   coin.CSRID = myBadgeID;
   coin.broadcasterID = gbp->badgeID;
   csr.coin = coin;
-  csr.signatureCSR[0] = 0x01;
+  //csr.signatureCSR[0] = 0x01;
+  sign((byte *)&csr.coin, sizeof(csr.coin), csr.signatureCSR, &signatureLen);
   
   Serial.print("Generating CSR for badge #");
   Serial.println(gbp->badgeID);
