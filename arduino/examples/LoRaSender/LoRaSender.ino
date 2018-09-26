@@ -30,20 +30,20 @@ void setup() {
   display.init();
   display.flipScreenVertically();
   display.setTextAlignment(TEXT_ALIGN_LEFT);
+  display.setBrightness(20);
   display.clear();
+
+  touchSetCycles(0xA00, 0x2000);
 }
 
 void loop() {
   const float Vb = (7.1f * analogRead(38)) / 2047.0;
 
-  String output = "v" + String(Vb) + "\n";
-  output += "Sending packet: ";
+  // String output = "v" + String(Vb) + "\n";
+  // output += "Sending packet: ";
+  String output = "";
   output += counter;
-  Serial.println(output);
-
-  display.clear();
-  display.drawStringMaxWidth(0, 0, 128, output);
-  display.display();
+  output += ": ";
 
   // send packet
   LoRa.beginPacket();
@@ -51,19 +51,48 @@ void loop() {
   LoRa.print(counter);
   LoRa.endPacket();
 
-  Serial.print(" 4:");
-  Serial.print(touchRead(T4));
-  Serial.print(" 5:");
-  Serial.print(touchRead(T5));
-  Serial.print(" 7:");
-  Serial.print(touchRead(T7));
-  Serial.print(" 8:");
-  Serial.print(touchRead(T8));
-  Serial.print(" 9:");
-  Serial.print(touchRead(T9));
-  Serial.println();
+  int t4 = touchRead(T4);
+  int t5 = touchRead(T5);
+  int t8 = touchRead(T8);
+  int t9 = touchRead(T9);
+  const int minT = 5;
+  // Serial.print(" 4:");
+  // Serial.print(touchRead(T4));
+  // Serial.print(" 5:");
+  // Serial.print(touchRead(T5));
+  // Serial.print(" 7:");
+  // Serial.print(touchRead(T7));
+  // Serial.print(" 8:");
+  // Serial.print(touchRead(T8));
+  // Serial.print(" 9:");
+  // Serial.print(touchRead(T9));
+  // Serial.println();
+  if (t8 < minT && t9 <minT) {
+    output += "A";
+  }
+  if (t4 < minT && t8 <minT) {
+    output += "B";
+  }
+
+  if (t4 < minT && t5 <minT) {
+    output += "Up";
+  }
+  if (t5 < minT && t9 <minT) {
+    output += "Down";
+  }
+  if (t5 < minT && t8 <minT) {
+    output += "Left";
+  }
+  if (t4 < minT && t9 <minT) {
+    output += "Right";
+  }
+  Serial.println(output);
+  
+  display.clear();
+  display.drawStringMaxWidth(0, 0, 128, output);
+  display.display();
 
   counter++;
 
-  delay(1000);
+  delay(100);
 }
