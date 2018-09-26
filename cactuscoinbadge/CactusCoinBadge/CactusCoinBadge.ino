@@ -18,9 +18,11 @@
 
 SSD1306 display(0x3c, 4, 15);
 Ticker gbpTimer;
-int counter = 0;
+int coinCounter = 0;
 uint16_t myBadgeID = 0;
+char myName[MAX_NAME_LENGTH] = "cybaix";
 bool sendGBP = false;
+bool TXLogFlush = false;
 mbedtls_pk_context badgePK;
 mbedtls_pk_context nodePK;
 mbedtls_entropy_context entropy;
@@ -28,6 +30,10 @@ mbedtls_ctr_drbg_context ctr_drbg;
 
 void triggerGBP() {
   sendGBP = true;
+}
+
+void triggerPendingTXLogFlush() {
+  TXLogFlush = true;
 }
 
 void setup() {
@@ -65,10 +71,17 @@ void setup() {
   display.clear();
 
   gbpTimer.attach(BROADCAST_TIME_SEC, triggerGBP);
+  gbpTimer.attach(TXLOG_FLUSH_SEC, triggerPendingTXLogFlush);
   
-  String output = "My Badge ID: ";
+  String output = "Badge ID: ";
   output += myBadgeID;
   display.drawStringMaxWidth(0, 0, 128, output);
+  output = "Name: ";
+  output += myName;
+  display.drawStringMaxWidth(0, 15, 128, output);
+  output = "Coins: ";
+  output += coinCounter;
+  display.drawStringMaxWidth(0, 30, 128, output);
   display.display();
 }
 
@@ -94,6 +107,7 @@ void processPacket() {
       case CDP_COINSIGNINGREQUEST_TYPE:
         if (isValidCoinSigningRequest(packetPtr, packetSize)) {
           transmitSignedCoin(myBadgeID, packetPtr, packetSize);
+          coinCounter++;
         }
         //if (!generateSignedCoin(myBadgeID, packetPtr, packetSize, signedCoin))
         //  break;  
@@ -110,6 +124,7 @@ void processPacket() {
           broadcasterID = getBroadcasterIDFromBytes(packetPtr, packetSize);
           storeUnsentSignedCoinOnFS(broadcasterID, json);
           submitSignedCoinToAPI(json);
+          coinCounter++;
         }
     }
 }
@@ -125,5 +140,9 @@ void loop() {
     transmitGlobalBroadcast(myBadgeID);
     sendGBP = false;
   }
-  
+
+  if (TXLogFlush) {
+    drainSignedCoinPendingTXLogOnFS();
+    TXLogFlush = false;
+  }
 }

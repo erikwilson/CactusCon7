@@ -1,4 +1,4 @@
-int submitSignedCoinToAPI(String json) {
+bool submitSignedCoinToAPI(String json) {
   WiFi.mode(WIFI_STA);
   WiFi.begin(WLAN_SSID, WLAN_PASSWD);
 
@@ -16,6 +16,8 @@ int submitSignedCoinToAPI(String json) {
   http.addHeader("Content-Type", "application/json");
   http.POST(root.);*/
   WiFi.mode(WIFI_OFF);
+
+  return false;
 }
 
 

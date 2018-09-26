@@ -128,7 +128,7 @@ String jsonifySignedCoin(byte *scnPtr, int packetSize) {
   SignedCoin *scn = (SignedCoin *)scnPtr;
   String jsonString;
   
-  StaticJsonBuffer<200> jsonBuffer;
+  StaticJsonBuffer<MAX_JSON_SIZE> jsonBuffer;
   JsonObject &root = jsonBuffer.createObject();
   root["CSRID"] = scn->csr.coin.CSRID;
   root["broadcasterID"] = scn->csr.coin.broadcasterID;
