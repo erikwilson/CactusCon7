@@ -10,4 +10,4 @@
 #define UNSUBMITTED_COIN_PATH "/unsubmitted.lst"
 #define MAX_NAME_LENGTH 255
 #define MAX_JSON_SIZE 4096
-#define TXLOG_FLUSH_SEC 60
+#define TXLOG_FLUSH_SEC 10

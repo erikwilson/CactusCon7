@@ -11,6 +11,7 @@
 #include "mbedtls/ctr_drbg.h"
 #include "mbedtls/md.h"
 #include "mbedtls/sha256.h"
+#include "mbedtls/base64.h"
 
 #include "config.h"
 #include "credentials.h"

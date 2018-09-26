@@ -66,9 +66,6 @@ bool appendSignedCoinOnPendingTXLogOnFS(uint16_t otherBadgeID) {
   char num[6];
   sprintf(num, "%d", otherBadgeID);
   File f = SPIFFS.open(UNSUBMITTED_COIN_PATH, "a");
-
-  if (ifCoinExistsOnFS(otherBadgeID))
-    return true;
   
   if (!f)
     return false;

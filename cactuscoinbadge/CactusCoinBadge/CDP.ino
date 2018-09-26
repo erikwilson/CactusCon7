@@ -131,13 +131,24 @@ uint16_t getBroadcasterIDFromBytes(byte *scnPtr, int packetSize) {
 String jsonifySignedCoin(byte *scnPtr, int packetSize) {
   SignedCoin *scn = (SignedCoin *)scnPtr;
   String jsonString;
+  size_t olen1, olen2;
+  int ret1,ret2;
+  unsigned char signatureCSRB64[1024]; // this should be ciel(modulus_size / 3) * 4, but im being lazy
+  unsigned char signatureBroadcasterB64[1024]; // this should be ciel(modulus_size / 3) * 4, but im being lazy
+
+  ret1 = mbedtls_base64_encode(signatureCSRB64, 1024, &olen1, scn->csr.signatureCSR, CDP_MODULUS_SIZE);
+  ret2 = mbedtls_base64_encode(signatureBroadcasterB64, 1024, &olen2, scn->signatureBroadcaster, CDP_MODULUS_SIZE);
+  Serial.print("Base64 ret: ");
+  Serial.println(ret1);
+  Serial.print("Base64 ret: ");
+  Serial.println(ret2);
   
   StaticJsonBuffer<MAX_JSON_SIZE> jsonBuffer;
   JsonObject &root = jsonBuffer.createObject();
   root["CSRID"] = scn->csr.coin.CSRID;
   root["broadcasterID"] = scn->csr.coin.broadcasterID;
-  root["signatureCSR"] = scn->csr.signatureCSR;
-  root["signatureBroadcaster"] = scn->signatureBroadcaster;
+  root["signatureCSR"] = signatureCSRB64;
+  root["signatureBroadcaster"] = signatureBroadcasterB64;
   root.printTo(jsonString);
   return jsonString;
 }
