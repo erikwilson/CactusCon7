@@ -4,7 +4,7 @@ bool transmitSignedCoin(uint16_t myBadgeID, byte *csrPtr, int packetSize) {
   SignedCoin signedCoin;
   CoinSigningRequest *csr;
   size_t signatureLen = 0;
-  String json;
+  char json[MAX_JSON_SIZE];
   
   csr = (CoinSigningRequest *)csrPtr;
   
@@ -16,13 +16,14 @@ bool transmitSignedCoin(uint16_t myBadgeID, byte *csrPtr, int packetSize) {
 
   signedCoin.csr = *csr;
   //signedCoin.signatureBroadcaster[0] = 0x02;
-  sign(csrPtr, sizeof(csr), signedCoin.signatureBroadcaster, &signatureLen);
+  sign(csrPtr, sizeof(CoinSigningRequest), signedCoin.signatureBroadcaster, &signatureLen);
 
-  json = jsonifySignedCoin((byte *)&signedCoin, sizeof(signedCoin));
-  storeUnsentSignedCoinOnFS(csr->coin.broadcasterID, json);  // mother of all hacks, this should really be in main
-  submitSignedCoinToAPI(json);
+  jsonifySignedCoin((byte *)&signedCoin, sizeof(signedCoin), json, MAX_JSON_SIZE);
+ 
+  if (!submitSignedCoinToAPI(json)) // mother of all hacks, this should really be in main
+    storeUnsentSignedCoinOnFS(csr->coin.broadcasterID, json);  
 
-  Serial.print("Transmitting signed coin to badge #");
+  Serial.print(F("Transmitting signed coin to badge #"));
   Serial.println(signedCoin.csr.coin.CSRID);
   LoRa.beginPacket();
   LoRa.write(CDP_SIGNEDCOIN_TYPE);
@@ -40,7 +41,7 @@ bool transmitCoinSigningRequest(uint16_t myBadgeID, byte *gbpPtr, int packetSize
   int packetRssi = LoRa.packetRssi();
   
   if ((packetSize - 1) != sizeof(GlobalBroadcast)) {  // subtract 1 to account for type byte
-    Serial.print("GlobalBroadcast was an invalid length of ");
+    Serial.print(F("GlobalBroadcast was an invalid length of "));
     Serial.println(packetSize);
     return false;
   }
@@ -48,15 +49,15 @@ bool transmitCoinSigningRequest(uint16_t myBadgeID, byte *gbpPtr, int packetSize
   gbp = (GlobalBroadcast *)gbpPtr;
 
   if (packetRssi < CSR_RSSI_THRESHOLD) {
-      Serial.print("Ignoring broadcast from badge #");
+      Serial.print(F("Ignoring broadcast from badge #"));
       Serial.print(gbp->badgeID);
-      Serial.print(" RSSI is too weak.. ");
+      Serial.print(F(" RSSI is too weak.. "));
       Serial.println(packetRssi);
       return false;
   }
 
   if (ifCoinExistsOnFS(gbp->badgeID)) {  // this is just getting stupid messy at this point
-      Serial.print("Coin already exists ignoring broadcast from badge ");
+      Serial.print(F("Coin already exists ignoring broadcast from badge "));
       Serial.println(gbp->badgeID);
       return false;
   }
@@ -67,7 +68,7 @@ bool transmitCoinSigningRequest(uint16_t myBadgeID, byte *gbpPtr, int packetSize
   //csr.signatureCSR[0] = 0x01;
   sign((byte *)&csr.coin, sizeof(csr.coin), csr.signatureCSR, &signatureLen);
   
-  Serial.print("Generating CSR for badge #");
+  Serial.print(F("Generating CSR for badge #"));
   Serial.println(gbp->badgeID);
   LoRa.beginPacket();
   LoRa.write(CDP_COINSIGNINGREQUEST_TYPE);
@@ -81,7 +82,7 @@ void transmitGlobalBroadcast(uint16_t myBadgeID) {
   GlobalBroadcast gbp;
   gbp.badgeID = myBadgeID;
   
-  Serial.print("Transmitting broadcast with my badge #");
+  Serial.print(F("Transmitting broadcast with my badge #"));
   Serial.println(gbp.badgeID);
   LoRa.beginPacket();
   LoRa.write(CDP_GLOBALBROADCAST_TYPE);
@@ -91,7 +92,7 @@ void transmitGlobalBroadcast(uint16_t myBadgeID) {
 
 bool isValidGlobalBroadcast(byte *gbpPtr, int packetSize) {
   if ((packetSize - 1) != sizeof(GlobalBroadcast)) {  // subtract 1 to account for type byte
-    Serial.print("GlobalBroadcast was an invalid length of ");
+    Serial.print(F("GlobalBroadcast was an invalid length of "));
     Serial.println(packetSize);
     return false;
   }
@@ -100,7 +101,7 @@ bool isValidGlobalBroadcast(byte *gbpPtr, int packetSize) {
 
 bool isValidCoinSigningRequest(byte *csrPtr, int packetSize) {
   if ((packetSize - 1) != sizeof(CoinSigningRequest)) {  // subtract 1 to account for type byte
-    Serial.print("CoinSigningRequest was an invalid length of ");
+    Serial.print(F("CoinSigningRequest was an invalid length of "));
     Serial.println(packetSize);
     return false;
   }
@@ -109,7 +110,7 @@ bool isValidCoinSigningRequest(byte *csrPtr, int packetSize) {
 
 bool isValidSignedCoin(byte *scnPtr, int packetSize) {
   if ((packetSize - 1) != sizeof(SignedCoin)) {  // subtract 1 to account for type byte
-    Serial.print("SignedCoin was an invalid length of ");
+    Serial.print(F("SignedCoin was an invalid length of "));
     Serial.println(packetSize);
     return false;
   }
@@ -128,20 +129,19 @@ uint16_t getBroadcasterIDFromBytes(byte *scnPtr, int packetSize) {
   return scn->csr.coin.broadcasterID;
 }
 
-String jsonifySignedCoin(byte *scnPtr, int packetSize) {
+bool jsonifySignedCoin(byte *scnPtr, int packetSize, char *buf, int bufsize) {
   SignedCoin *scn = (SignedCoin *)scnPtr;
-  String jsonString;
   size_t olen1, olen2;
-  int ret1,ret2;
-  unsigned char signatureCSRB64[1024]; // this should be ciel(modulus_size / 3) * 4, but im being lazy
-  unsigned char signatureBroadcasterB64[1024]; // this should be ciel(modulus_size / 3) * 4, but im being lazy
+  unsigned char signatureCSRB64[BASE64_MAX_SIZE]; // this should be ciel(modulus_size / 3) * 4, but im being lazy
+  unsigned char signatureBroadcasterB64[BASE64_MAX_SIZE]; // this should be ciel(modulus_size / 3) * 4, but im being lazy
 
-  ret1 = mbedtls_base64_encode(signatureCSRB64, 1024, &olen1, scn->csr.signatureCSR, CDP_MODULUS_SIZE);
-  ret2 = mbedtls_base64_encode(signatureBroadcasterB64, 1024, &olen2, scn->signatureBroadcaster, CDP_MODULUS_SIZE);
-  Serial.print("Base64 ret: ");
-  Serial.println(ret1);
-  Serial.print("Base64 ret: ");
-  Serial.println(ret2);
+  if (mbedtls_base64_encode(signatureCSRB64, BASE64_MAX_SIZE, &olen1, scn->csr.signatureCSR, CDP_MODULUS_SIZE) != 0 ) {
+    Serial.println(F("Failed to convert CSR signature to base64"));
+    return "";
+  }
+  if (mbedtls_base64_encode(signatureBroadcasterB64, BASE64_MAX_SIZE, &olen2, scn->signatureBroadcaster, CDP_MODULUS_SIZE) != 0) {
+    Serial.println(F("Failed to convert broadcaster signature to base64"));
+  }
   
   StaticJsonBuffer<MAX_JSON_SIZE> jsonBuffer;
   JsonObject &root = jsonBuffer.createObject();
@@ -149,7 +149,7 @@ String jsonifySignedCoin(byte *scnPtr, int packetSize) {
   root["broadcasterID"] = scn->csr.coin.broadcasterID;
   root["signatureCSR"] = signatureCSRB64;
   root["signatureBroadcaster"] = signatureBroadcasterB64;
-  root.printTo(jsonString);
-  return jsonString;
+  root.printTo(buf, bufsize);
+  return true;
 }
 

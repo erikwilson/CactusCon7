@@ -1,5 +1,7 @@
 import json
+import struct
 import time
+import base64
 
 from flask import current_app as app
 from flask_restful import abort, Resource
@@ -55,24 +57,24 @@ class Coin(Resource):
 
         # validate signatures
         try:
-            csr = self.validate(coin)
+            self.validate(coin)
         except InvalidMessageSignature:
             msg = 'Invalid signatures on coin'
             abort(403, message=signed_jsonify({'status':403, 'message':msg}))
 
         # TODO: Could use some redis data structure clean up, there is better ways to do this
         # check if a coin already exists
-        keys = sorted((csr['beacon_id'], csr['seer_id']))
+        keys = sorted((coin['broadcasterID'], coin['CSRID']))
 
         if app.redis_store.hget('coins', keys):
             abort(409, message=signed_jsonify({'status':208, 'message':'coin already submitted'}))
 
         redis_pipe = app.redis_store.pipeline() # complete the following redis operations atomically
         redis_pipe.hset('coins', keys, int(time.time()))
-        redis_pipe.sadd('badge_coins_{}'.format(csr['beacon_id']), csr['seer_id'])  
-        redis_pipe.sadd('badge_coins_{}'.format(csr['seer_id']), csr['beacon_id'])  
-        redis_pipe.zincrby('scoreboard', csr['beacon_id'])
-        redis_pipe.zincrby('scoreboard', csr['seer_id'])
+        redis_pipe.sadd('badge_coins_{}'.format(coin['broadcasterID']), coin['CSRID'])  
+        redis_pipe.sadd('badge_coins_{}'.format(coin['CSRID']), coin['broadcasterID'])  
+        redis_pipe.zincrby('scoreboard', coin['broadcasterID'])
+        redis_pipe.zincrby('scoreboard', coin['CSRID'])
         redis_pipe.execute()
 
         #scoreboard sortedset 
@@ -87,15 +89,16 @@ class Coin(Resource):
 
         Args:
             coin: JSON message containing the full cactuscoin. Should look something like:
-                  {"csr": {"beacon_id":1, "seer_id":2}, "seer_sig":"base64", "beacon_sig":"base64"}
+                  {"CSRID": 1, "broadcasterID": 2, "signatureCSR": "base64", signatureBroadcaster: "base64"}
 
         Raises:
             cactuscoin.crypto.InvalidMessageSignature: When an invalid signature is detected on the coin.
         """
-        csr = json.loads(coin['csr'])
-        beacon_sig = coin.pop('beacon_sig')
+        #csr = json.loads(coin['csr'])
+        #beacon_sig = coin.pop('beacon_sig')
         # validate beacon signature (coin, beacon_sig)
-        verify(json.dumps(coin), beacon_sig, app.badge_keys[csr['beacon_id']])
-        # validate seer signature (csr, coin['seer_sig'])
-        verify(coin['csr'], coin['seer_sig'], app.badge_keys[csr['seer_id']])
-        return csr
+
+        coinbits = struct.pack('HH', coin['CSRID'], coin['broadcasterID'])
+        verify(coinbits, coin['signatureCSR'], app.badge_keys[coin['CSRID']])
+        coinbits = coinbits + base64.b64decode(coin['signatureCSR'])
+        verify(coinbits, coin['signatureBroadcaster'], app.badge_keys[coin['broadcasterID']])

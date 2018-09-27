@@ -1,5 +1,6 @@
 from flask import current_app as app
 from . import crypto
+import sys
 
 def init_keys():
     if 'CONFERENCE_PRIVATE_KEY' in app.config:
@@ -20,6 +21,7 @@ def init_keys():
     key_files = app.redis_store.hgetall('badge_keys')
     badge_keys = {}
     for badge_id in key_files:
+        #print ("loading key {}".format(badge_id), file=sys.stdout)
         badge_keys[int(badge_id)] = crypto.load_public_key(key_files[badge_id])
 
     app.badge_keys = badge_keys

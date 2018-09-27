@@ -8,6 +8,9 @@
 #define BADGE_TX_POWER 1
 
 #define UNSUBMITTED_COIN_PATH "/unsubmitted.lst"
-#define MAX_NAME_LENGTH 255
-#define MAX_JSON_SIZE 4096
+#define MAX_NAME_LENGTH 50
+#define MAX_JSON_SIZE 450
+#define BASE64_MAX_SIZE 200
 #define TXLOG_FLUSH_SEC 10
+
+#define CACTUSCOINAPI_IP "10.77.77.122:5000"

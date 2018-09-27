@@ -1,4 +1,6 @@
 import json
+import struct
+import base64
 import pytest
 import functools
 
@@ -65,20 +67,20 @@ def badge_pub_keys(shared_datadir):
 
 @pytest.fixture
 def valid_cactuscoin(badge_pub_keys, badge_keys):
-    badge1_msg = json.dumps({'beacon_id': 1, 'seer_id':2}) # badge 1 beaconed, badge 2 did the CSR
-    badge1_csr = {'csr':badge1_msg, 'seer_sig':crypto.sign(badge1_msg, badge_keys[2])}
-    badge2_sig = crypto.sign(json.dumps(badge1_csr), badge_keys[1])
-    coin = badge1_csr
-    coin['beacon_sig'] = badge2_sig
+    coinbits = struct.pack('HH', 2, 1)
+    coin = {'CSRID':2, 'broadcasterID':1, 'signatureCSR':crypto.sign(coinbits, badge_keys[2])}
+    coinbits += base64.b64decode(coin['signatureCSR'])
+    badge2_sig = crypto.sign(coinbits, badge_keys[1])
+    coin['signatureBroadcaster'] = badge2_sig
     return coin
 
 @pytest.fixture
 def invalid_cactuscoin(badge_pub_keys, badge_keys):
-    badge1_msg = json.dumps({'beacon_id': 2, 'seer_id':1}) # swapped id so signatures won't match
-    badge1_csr = {'csr':badge1_msg, 'seer_sig':crypto.sign(badge1_msg, badge_keys[2])}
-    badge2_sig = crypto.sign(json.dumps(badge1_csr), badge_keys[1])
-    coin = badge1_csr
-    coin['beacon_sig'] = badge2_sig
+    coinbits = struct.pack('HH', 1, 2) # swapped id so signatures won't match
+    coin = {'CSRID':2, 'broadcasterID':1, 'signatureCSR':crypto.sign(coinbits, badge_keys[2])}
+    coinbits += base64.b64decode(coin['signatureCSR'])
+    badge2_sig = crypto.sign(coinbits, badge_keys[1])
+    coin['signatureBroadcaster'] = badge2_sig
     return coin
 
 #User pops in batteries, prompted by display to type a name or use default.

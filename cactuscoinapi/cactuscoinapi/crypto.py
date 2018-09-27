@@ -51,10 +51,7 @@ def sign(msg, private_key):
     digest = hasher.finalize()
     sig = private_key.sign(
         digest,
-        padding.PSS(
-            mgf=padding.MGF1(hashes.SHA256()),
-            salt_length=padding.PSS.MAX_LENGTH
-        ),
+        padding.PKCS1v15(),
         utils.Prehashed(chosen_hash)
     )
     return base64.b64encode(sig).decode('utf8')    
@@ -73,10 +70,7 @@ def verify(msg, sig64, public_key):
         public_key.verify(
             sig,
             digest,
-            padding.PSS(
-                mgf=padding.MGF1(hashes.SHA256()),
-                salt_length=padding.PSS.MAX_LENGTH
-            ),
+            padding.PKCS1v15(),
             utils.Prehashed(chosen_hash)
         )
     except InvalidSignature as ex:

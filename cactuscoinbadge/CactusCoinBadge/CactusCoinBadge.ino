@@ -41,7 +41,7 @@ void triggerPendingTXLogFlush() {
 void setup() {
   Serial.begin(115200);
   while (!Serial);
-  Serial.println("CactusCoinBadge v1.0");
+  Serial.println(F("CactusCoinBadge v1.0"));
 
   if (!setupFS())
     return;
@@ -56,11 +56,11 @@ void setup() {
   
   LoRa.setPins(18, 14, 26);
   if (!LoRa.begin(433E6)) {
-    Serial.println("Starting LoRa failed!");
+    Serial.println(F("Starting LoRa failed!"));
     while (1);
   }
   LoRa.setTxPower(BADGE_TX_POWER);
-  Serial.println("LoRa started...");
+  Serial.println(F("LoRa started..."));
 
   pinMode(16, OUTPUT);
   digitalWrite(16, LOW);    // set GPIO16 low to reset OLED
@@ -79,16 +79,15 @@ void setup() {
 }
 
 void updateDisplay() {
+  char badgeIDMessage[20], nameMessage[MAX_NAME_LENGTH + 6], coinMessage[13];
+  sprintf(badgeIDMessage, "Badge ID: %d", myBadgeID);
+  sprintf(nameMessage, "Name: %s", myName);
+  sprintf(coinMessage, "Coins: %d", coinCounter);
+  
   display.clear();
-  String output = "Badge ID: ";
-  output += myBadgeID;
-  display.drawStringMaxWidth(0, 0, 128, output);
-  output = "Name: ";
-  output += myName;
-  display.drawStringMaxWidth(0, 15, 128, output);
-  output = "Coins: ";
-  output += coinCounter;
-  display.drawStringMaxWidth(0, 30, 128, output);
+  display.drawStringMaxWidth(0, 0, 128, badgeIDMessage);
+  display.drawStringMaxWidth(0, 15, 128, nameMessage);
+  display.drawStringMaxWidth(0, 30, 128, coinMessage);
   display.display();
 }
 
@@ -96,7 +95,7 @@ void processPacket() {
     int packetSize = LoRa.available();
     byte packet[packetSize];
     byte *packetPtr = &packet[1];
-    String json;
+    char json[MAX_JSON_SIZE];
     uint16_t broadcasterID;
     SignedCoin signedCoin;
 
@@ -114,7 +113,6 @@ void processPacket() {
       case CDP_COINSIGNINGREQUEST_TYPE:
         if (isValidCoinSigningRequest(packetPtr, packetSize)) {
           transmitSignedCoin(myBadgeID, packetPtr, packetSize);
-          coinCounter++;
         }
         //if (!generateSignedCoin(myBadgeID, packetPtr, packetSize, signedCoin))
         //  break;  
@@ -127,11 +125,10 @@ void processPacket() {
         
       case CDP_SIGNEDCOIN_TYPE:
         if (isValidSignedCoin(packetPtr, packetSize)) {
-          json = jsonifySignedCoin(packetPtr, packetSize);
+          jsonifySignedCoin(packetPtr, packetSize, json, MAX_JSON_SIZE);
           broadcasterID = getBroadcasterIDFromBytes(packetPtr, packetSize);
-          storeUnsentSignedCoinOnFS(broadcasterID, json);
-          submitSignedCoinToAPI(json);
-          coinCounter++;
+          if (!submitSignedCoinToAPI(json))
+            storeUnsentSignedCoinOnFS(broadcasterID, json);
         }
     }
 }
