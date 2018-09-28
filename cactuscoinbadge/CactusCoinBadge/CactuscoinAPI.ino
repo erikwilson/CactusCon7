@@ -1,5 +1,7 @@
 bool submitSignedCoinToAPI(const char *json) {
   char CCAPIMessage[MAX_JSON_SIZE * 2];  
+  char jsonResponse[MAX_JSON_SIZE];
+  StaticJsonBuffer<MAX_JSON_SIZE> jsonBuffer;
   char url[100];
   int status;
 
@@ -26,18 +28,27 @@ bool submitSignedCoinToAPI(const char *json) {
   HTTPClient http;
   http.begin(url);
   http.addHeader("Content-Type", "application/json");
-  status = http.POST(CCAPIMessage);
-  WiFi.mode(WIFI_OFF);
+  http.POST(CCAPIMessage);
+  
+  getSignedJSONMessage(http.getString().c_str(), jsonResponse, MAX_JSON_SIZE);
+  JsonObject &root = jsonBuffer.parseObject(jsonResponse);
 
-  if (status != 200 && status != 409) {
+  if (!root.containsKey("status")) {
+    Serial.println(F("ERROR: Expected a status key from API, but it wasn't there"));
+    return false;
+  }
+  
+  WiFi.mode(WIFI_OFF);
+  
+  if (root["status"] != 200 && root["status"] != 409) {
     Serial.print(F("ERROR: API returned failure status code of "));
     Serial.println(status);
     return false;
   }
-
-  if (status != 409)
+  
+  if (root["status"] != 409)
     coinCounter ++;
-    
+  
   return true;
 }
 
@@ -65,12 +76,16 @@ bool refreshLocalCoinListFromAPI() {
     status = http.POST(CCAPIMessage);
     
     if (status != 200) {
-      Serial.printf("WARN: Bad response (%d) from API when pulling coined badges.\r\r\n", status);
+      Serial.printf("WARN: Bad response (%d)", status);
+      Serial.println(" from API when pulling coined badges.");
       break;
     }
 
     memset(jsonMessage, 0, sizeof(jsonMessage));
-    getSignedJSONMessage(http.getString().c_str(), jsonMessage, MAX_JSON_SIZE);
+    if (!getSignedJSONMessage(http.getString().c_str(), jsonMessage, MAX_JSON_SIZE)) {
+      Serial.println(F("ERROR: Failed to get a signed message back from the API."));
+      return false;
+    }
     JsonArray& badgeArray = jsonBuffer.parseArray(jsonMessage);
 
     for (auto value : badgeArray) {
@@ -115,9 +130,8 @@ bool getSignedJSONMessage(const char *httpResponse, char *results, int resultMax
 
   strncpy(signatureB64, root["sig"], signatureSize);
   strncpy(results, root["msg"], resultMaxSize);
-  Serial.println(signatureB64);
-  mbedtls_base64_decode(signature, CDP_MODULUS_SIZE, &sigLen, (byte *)signatureB64, BASE64_MAX_SIZE);
-  return verify((byte *)results, messageSize, signature, sigLen);
+  mbedtls_base64_decode(signature, CDP_MODULUS_SIZE, &sigLen, (byte *)signatureB64, signatureSize);
+  return verify((byte *)results, messageSize, signature, CDP_MODULUS_SIZE);
 }
 
 

@@ -67,8 +67,6 @@ int sign(unsigned char *toSign, int toSignLen, unsigned char *buf, size_t *olen)
 bool verify(unsigned char *toVerify, int toVerifyLen, unsigned char *sig, size_t sigLen) {
   unsigned char hash[32];
   int ret;
-  Serial.println((char *)toVerify);
-  Serial.printf("toVerifyLen: %d sigLen: %d\r\r\n", toVerifyLen, sigLen);
   mbedtls_sha256_ret(toVerify, toVerifyLen, hash, 0);
   
   if( ( ret = mbedtls_pk_verify( &nodePK, MBEDTLS_MD_SHA256, hash, 0, sig, sigLen ) ) != 0 )

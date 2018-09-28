@@ -25,6 +25,7 @@ uint16_t myBadgeID = 0;
 char myName[MAX_NAME_LENGTH];
 bool sendGBP = false;
 bool TXLogFlush = false;
+bool catastrophicFailure = false; 
 mbedtls_pk_context badgePK;
 mbedtls_pk_context nodePK;
 mbedtls_entropy_context entropy;
@@ -44,15 +45,34 @@ void setup() {
   Serial.println(F("CactusCoinBadge v1.1"));
   btStop();
 
-  if (!setupFS())
-    return;
+  pinMode(16, OUTPUT);
+  digitalWrite(16, LOW);    // set GPIO16 low to reset OLED
+  delay(50);
+  digitalWrite(16, HIGH); // while OLED is running, must set GPIO16 in high
 
-  if (!setupCrypto())
+  display.init();
+  display.flipScreenVertically();
+  display.setTextAlignment(TEXT_ALIGN_LEFT);
+  display.clear();
+
+  if (!setupFS()) {
+    catastrophicFailure = true;
     return;
+  }
+
+  if (!setupCrypto()) {
+    catastrophicFailure = true;
+    return;
+  }
     
   turnWiFiOnAndConnect();
 
-  registerBadge();
+  if (!registerBadge()) {
+    turnWiFiOff();
+    catastrophicFailure = true;
+    return;
+  }
+  
   refreshLocalCoinListFromAPI();
 
   turnWiFiOff();
@@ -65,16 +85,6 @@ void setup() {
   LoRa.setTxPower(BADGE_TX_POWER);
   Serial.println(F("LoRa started..."));
 
-  pinMode(16, OUTPUT);
-  digitalWrite(16, LOW);    // set GPIO16 low to reset OLED
-  delay(50);
-  digitalWrite(16, HIGH); // while OLED is running, must set GPIO16 in high
-
-  display.init();
-  display.flipScreenVertically();
-  display.setTextAlignment(TEXT_ALIGN_LEFT);
-  display.clear();
-
   gbpTimer.attach(BROADCAST_TIME_SEC, triggerGBP);
   TXLogTimer.attach(TXLOG_FLUSH_SEC, triggerPendingTXLogFlush);
 
@@ -83,6 +93,14 @@ void setup() {
 
 void updateDisplay() {
   char badgeIDMessage[20], nameMessage[MAX_NAME_LENGTH + 6], coinMessage[13];
+
+  if (catastrophicFailure) {
+    display.clear();
+    display.drawStringMaxWidth(0, 0, 128, F("Problem bootstrapping badge.  Get closer to WiFi, see a volunteer, or plug me in and start hacking to fix it yourself :)."));
+    display.display();
+    return;
+  }
+  
   sprintf(badgeIDMessage, "Badge ID: %d", myBadgeID);
   sprintf(nameMessage, "Name: %s", myName);
   sprintf(coinMessage, "Coins: %d", coinCounter);

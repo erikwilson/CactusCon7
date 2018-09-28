@@ -2,7 +2,7 @@
  * Obtains the name from the user using the dpad if this badge has never been registered, 
  * then registers the supplied name for this badge on a cactuscoin node over wifi.
  */
-void registerBadge(){
+bool registerBadge(){
   // turn on wifi
   // hit badge endpoint on cactuscoin node to determine if this badge already has a registered name with it (if so bail and/or give user option to update name).
   // ask the user for a name and register with the cactuscoin node.
@@ -12,6 +12,7 @@ void registerBadge(){
   char CCAPIMessage[MAX_JSON_SIZE];
   char json[MAX_JSON_SIZE];  
   char url[100];
+  char jsonResponse[MAX_JSON_SIZE];
   StaticJsonBuffer<MAX_JSON_SIZE> jsonBuffer;
 
   if (SPIFFS.exists("/my.name")) {
@@ -26,7 +27,7 @@ void registerBadge(){
         myName[i] = tmp;
         i ++;
       }
-      return;
+      return true;
     }
   }
 
@@ -44,6 +45,20 @@ void registerBadge(){
   http.begin(url);
   http.addHeader("Content-Type", "application/json");
   status = http.POST(CCAPIMessage);
+  
+  getSignedJSONMessage(http.getString().c_str(), jsonResponse, MAX_JSON_SIZE);
+  JsonObject &rootResponse = jsonBuffer.parseObject(jsonResponse);
+
+  if (!rootResponse.containsKey("status")) {
+    Serial.println(F("ERROR: Expected a status key from API, but it wasn't there"));
+    return false;
+  }
+  status = rootResponse["status"];
+  if (!rootResponse["status"] != 200) {
+    Serial.print(F("ERROR: API returned unexpected status of "));
+    Serial.println(status);
+    return false;
+  }
 
   File f = SPIFFS.open("/my.name", "w");
 
@@ -52,4 +67,5 @@ void registerBadge(){
 
   f.print(myName);
   f.close();
+  return true;
 }
