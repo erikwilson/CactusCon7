@@ -64,7 +64,7 @@ void setup() {
     catastrophicFailure = true;
     return;
   }
-    
+  drainSignedCoinPendingTXLogOnFS();
   turnWiFiOnAndConnect();
 
   if (!registerBadge()) {
@@ -72,7 +72,7 @@ void setup() {
     catastrophicFailure = true;
     return;
   }
-  
+
   refreshLocalCoinListFromAPI();
 
   turnWiFiOff();

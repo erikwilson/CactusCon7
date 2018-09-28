@@ -54,7 +54,7 @@ bool registerBadge(){
     return false;
   }
   status = rootResponse["status"];
-  if (!rootResponse["status"] != 200) {
+  if (rootResponse["status"] != 200) {
     Serial.print(F("ERROR: API returned unexpected status of "));
     Serial.println(status);
     return false;
