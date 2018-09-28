@@ -4,6 +4,7 @@ import time
 import base64
 
 from flask import current_app as app
+from flask import request
 from flask_restful import abort, Resource
 from .utils import get_signed_json, signed_jsonify
 from .crypto import InvalidMessageSignature, verify
@@ -32,12 +33,13 @@ class Coin(Resource):
             this badge has generated.  Timestamp is when the coin was first submitted.
         """
         coins = []
-        badges = app.redis_store.smembers('badge_coins_{}'.format(badge_id))
+        badges = app.redis_store.lrange('badge_coins_{}'.format(badge_id), 0, -1)
 
         for other_badge in badges:
             other_id = int(other_badge)
             other_name = app.redis_store.hget('badge_names', other_badge).decode('utf8')
             timestamp = int(app.redis_store.hget('coins', str(sorted((badge_id, other_id)))))
+
             coins.append({'other_id':other_id, 'other_name':other_name, 'timestamp':timestamp})
 
         return signed_jsonify(coins)
@@ -71,8 +73,8 @@ class Coin(Resource):
 
         redis_pipe = app.redis_store.pipeline() # complete the following redis operations atomically
         redis_pipe.hset('coins', keys, int(time.time()))
-        redis_pipe.sadd('badge_coins_{}'.format(coin['broadcasterID']), coin['CSRID'])  
-        redis_pipe.sadd('badge_coins_{}'.format(coin['CSRID']), coin['broadcasterID'])  
+        redis_pipe.lpush('badge_coins_{}'.format(coin['broadcasterID']), coin['CSRID'])  
+        redis_pipe.lpush('badge_coins_{}'.format(coin['CSRID']), coin['broadcasterID'])  
         redis_pipe.zincrby('scoreboard', coin['broadcasterID'])
         redis_pipe.zincrby('scoreboard', coin['CSRID'])
         redis_pipe.execute()
