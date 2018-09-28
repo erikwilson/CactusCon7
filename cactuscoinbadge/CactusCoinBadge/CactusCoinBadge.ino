@@ -60,8 +60,6 @@ void setup() {
   display.setBrightness(20);
 
   display.clear();
-  display.setFont(Roboto_Light_11);
-  display.drawStringMaxWidth(0, 0, 128, "<- hold to change name");
   display.setFont(Roboto_Light_15);
   display.drawStringMaxWidth(0, 24, 128, "Connecting...");
   display.display();
@@ -124,9 +122,9 @@ void updateDisplay() {
   
   display.clear();
   display.setFont(Roboto_Light_15);
-  display.drawStringMaxWidth(0, 0, 128, badgeIDMessage);
-  display.drawStringMaxWidth(0, 21, 128, nameMessage);
-  display.drawStringMaxWidth(0, 42, 128, coinMessage);
+  display.drawString(0, 0, 128, badgeIDMessage);
+  display.drawString(0, 21, nameMessage);
+  display.drawString(0, 42, 128, coinMessage);
   display.display();
 }
 
