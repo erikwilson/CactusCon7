@@ -5,6 +5,7 @@
 SSD1306 display(0x3c, 4, 15);
 
 int counter = 0;
+int t4Max, t5Max, t8Max, t9Max;
 
 void setup() {
   Serial.begin(115200);
@@ -34,6 +35,27 @@ void setup() {
   display.clear();
 
   touchSetCycles(0xA00, 0x2000);
+  touchRead(T4);
+  touchRead(T5);
+  touchRead(T8);
+  touchRead(T9);
+
+  // delay(100);
+
+  // t4Max = touchRead(T4);
+  // t5Max = touchRead(T5);
+  // t8Max = touchRead(T8);
+  // t9Max = touchRead(T9);
+
+  // Serial.print(" 4 Max:");
+  // Serial.print(t4Max);
+  // Serial.print(" 5 Max:");
+  // Serial.print(t5Max);
+  // Serial.print(" 8 Max:");
+  // Serial.print(t8Max);
+  // Serial.print(" 9 Max:");
+  // Serial.print(t9Max);
+  // Serial.println();
 }
 
 void loop() {
@@ -55,37 +77,62 @@ void loop() {
   int t5 = touchRead(T5);
   int t8 = touchRead(T8);
   int t9 = touchRead(T9);
-  const int minT = 5;
-  // Serial.print(" 4:");
-  // Serial.print(touchRead(T4));
-  // Serial.print(" 5:");
-  // Serial.print(touchRead(T5));
-  // Serial.print(" 7:");
-  // Serial.print(touchRead(T7));
-  // Serial.print(" 8:");
-  // Serial.print(touchRead(T8));
-  // Serial.print(" 9:");
-  // Serial.print(touchRead(T9));
-  // Serial.println();
-  if (t8 < minT && t9 <minT) {
-    output += "A";
-  }
-  if (t4 < minT && t8 <minT) {
-    output += "B";
-  }
+  if (t4 > t4Max) { t4Max = t4; }
+  if (t5 > t5Max) { t5Max = t5; }
+  if (t8 > t8Max) { t8Max = t8; }
+  if (t9 > t9Max) { t9Max = t9; }
 
-  if (t4 < minT && t5 <minT) {
-    output += "Up";
+  const float diff = 0.9;
+  Serial.print(" 4:");
+  Serial.print(t4);
+  Serial.print(" 5:");
+  Serial.print(t5);
+  Serial.print(" 8:");
+  Serial.print(t8);
+  Serial.print(" 9:");
+  Serial.print(t9);
+  Serial.println();
+
+  Serial.print(" 4:");
+  Serial.print(t4Max*diff);
+  Serial.print(" 5:");
+  Serial.print(t5Max*diff);
+  Serial.print(" 8:");
+  Serial.print(t8Max*diff);
+  Serial.print(" 9:");
+  Serial.print(t9Max*diff);
+  Serial.println();
+
+  String button = "";
+  int numButtons = 0;
+  if (t8 < (t8Max*diff)  && t9 < (t9Max*diff)) {
+    button += "A";
+    numButtons++;
   }
-  if (t5 < minT && t9 <minT) {
-    output += "Down";
+  if (t4 < (t4Max*diff)  && t8 < (t8Max*diff)) {
+    button += "B";
+    numButtons++;
   }
-  if (t5 < minT && t8 <minT) {
-    output += "Left";
+  if (t4 < (t4Max*diff)  && t5 < (t5Max*diff)) {
+    button += "Up";
+    numButtons++;
   }
-  if (t4 < minT && t9 <minT) {
-    output += "Right";
+  if (t5 < (t5Max*diff)  && t9 < (t9Max*diff)) {
+    button += "Down";
+    numButtons++;
   }
+  if (t5 < (t5Max*diff)  && t8 < (t8Max*diff)) {
+    button += "Left";
+    numButtons++;
+  }
+  if (t4 < (t4Max*diff)  && t9 < (t9Max*diff)) {
+    button += "Right";
+    numButtons++;
+  }
+  if (numButtons > 1) {
+    button = "...";
+  }
+  output += button;
   Serial.println(output);
   
   display.clear();
@@ -94,5 +141,5 @@ void loop() {
 
   counter++;
 
-  delay(100);
+  // delay(10);
 }
