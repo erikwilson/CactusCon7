@@ -82,6 +82,7 @@ bool appendSignedCoinOnPendingTXLogOnFS(uint16_t otherBadgeID) {
 void drainSignedCoinPendingTXLogOnFS() {
   String path;
   String otherBadgeID;
+  String coin;
   Serial.println(F("Attempting a pending coin TX log flush"));
   File tmpTXLog = SPIFFS.open("/tmp/txlog.tmp", "w");
   File TXLog = SPIFFS.open(UNSUBMITTED_COIN_PATH, "r");
@@ -102,13 +103,14 @@ void drainSignedCoinPendingTXLogOnFS() {
       continue;
     }
 
-    if (!submitSignedCoinToAPI(coinFile.readStringUntil('\n').c_str())) {
+    coin = coinFile.readStringUntil('\n');
+    if (!coin.length() == 3 && !submitSignedCoinToAPI(coin.c_str())) {  // len of 3 indicates coin must have already been submitted
       tmpTXLog.println(otherBadgeID);
       coinFile.close();
     } else {
       coinFile.close();
       File coinFile = SPIFFS.open(path, "w");  // coin submitted okay truncate the json to save space
-      coinFile.println();
+      coinFile.println(" ");
       coinFile.close();
     }
   }
@@ -118,3 +120,18 @@ void drainSignedCoinPendingTXLogOnFS() {
   SPIFFS.remove(UNSUBMITTED_COIN_PATH);
   SPIFFS.rename("/tmp/txlog.tmp", UNSUBMITTED_COIN_PATH);
 }
+
+bool storeCompletedCoinOnFS(uint16_t otherBadgeID) {
+  char coinPath[255];
+  sprintf(coinPath, "/coins/%d", otherBadgeID);
+  File coinFile = SPIFFS.open(coinPath, "w");  // coin submitted okay truncate the json to save space
+
+  if (!coinFile) {
+    Serial.print(F("This isn't good, couldn't write out the coin at:"));
+    Serial.println(coinPath);
+    return false;
+  }
+  coinFile.println(" ");
+  coinFile.close();
+}
+

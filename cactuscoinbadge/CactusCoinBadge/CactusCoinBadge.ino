@@ -22,7 +22,7 @@ Ticker gbpTimer;
 Ticker TXLogTimer;
 int coinCounter = 0;
 uint16_t myBadgeID = 0;
-char myName[MAX_NAME_LENGTH] = "cybaix";
+char myName[MAX_NAME_LENGTH];
 bool sendGBP = false;
 bool TXLogFlush = false;
 mbedtls_pk_context badgePK;
@@ -41,7 +41,8 @@ void triggerPendingTXLogFlush() {
 void setup() {
   Serial.begin(115200);
   while (!Serial);
-  Serial.println(F("CactusCoinBadge v1.0"));
+  Serial.println(F("CactusCoinBadge v1.1"));
+  btStop();
 
   if (!setupFS())
     return;
@@ -49,10 +50,12 @@ void setup() {
   if (!setupCrypto())
     return;
     
-  registerBadge();
+  turnWiFiOnAndConnect();
 
-  WiFi.mode(WIFI_OFF);
-  btStop();
+  registerBadge();
+  refreshLocalCoinListFromAPI();
+
+  turnWiFiOff();
   
   LoRa.setPins(18, 14, 26);
   if (!LoRa.begin(433E6)) {
@@ -74,7 +77,7 @@ void setup() {
 
   gbpTimer.attach(BROADCAST_TIME_SEC, triggerGBP);
   TXLogTimer.attach(TXLOG_FLUSH_SEC, triggerPendingTXLogFlush);
-  
+
   updateDisplay();
 }
 
@@ -101,8 +104,10 @@ void processPacket() {
 
     for (int i = 0; i < packetSize; i++)
       packet[i] = LoRa.read();
-
-    // received a packet
+      
+    //Serial.print(F("LORA: Got a packet of type "));
+    //Serial.printf("%02X\r\r\n", packet[0]);
+    
     switch (packet[0]) {
       case CDP_GLOBALBROADCAST_TYPE:
         if (isValidGlobalBroadcast(packetPtr, packetSize))
@@ -114,13 +119,6 @@ void processPacket() {
         if (isValidCoinSigningRequest(packetPtr, packetSize)) {
           transmitSignedCoin(myBadgeID, packetPtr, packetSize);
         }
-        //if (!generateSignedCoin(myBadgeID, packetPtr, packetSize, signedCoin))
-        //  break;  
-        //json = jsonifySignedCoin(&signedCoin);
-        //Serial.println(json);
-        //storeUnsentSignedCoinOnFS(signedCoin.csr.coin.broadcasterID, json);
-        //transmitSignedCoin(myBadgeID, packetPtr, packetSize);
-        //submitSignedCoinToAPI(json);
         break;
         
       case CDP_SIGNEDCOIN_TYPE:
@@ -129,6 +127,8 @@ void processPacket() {
           broadcasterID = getBroadcasterIDFromBytes(packetPtr, packetSize);
           if (!submitSignedCoinToAPI(json))
             storeUnsentSignedCoinOnFS(broadcasterID, json);
+          else
+            storeCompletedCoinOnFS(broadcasterID);
         }
     }
 }

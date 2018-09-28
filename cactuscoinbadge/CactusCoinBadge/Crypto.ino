@@ -8,14 +8,14 @@ bool setupCrypto() {
   mbedtls_ctr_drbg_init(&ctr_drbg);
   
   if ((ret = mbedtls_pk_parse_keyfile(&badgePK, "/spiffs/private.pem", "")) != 0) {
-    Serial.print(F("Failed to load badge private key, error code: "));
+    Serial.print(F("ERROR: Failed to load badge private key, error code: "));
     Serial.println(ret);
     teardownCrypto();
     return false;
   }
   
   if ((ret = mbedtls_pk_parse_public_keyfile(&nodePK, "/spiffs/cactuscoinapi.pem") ) != 0) {
-    Serial.print(F("Failed to load cactuscoinapi public key, error code: "));
+    Serial.print(F("ERROR: Failed to load cactuscoinapi public key, error code: "));
     Serial.println(ret);
     teardownCrypto();
     return false;
@@ -25,7 +25,7 @@ bool setupCrypto() {
                                (const unsigned char *) pers,
                                strlen( pers ) ) ) != 0 )
   {
-    Serial.print(F("Failed to seed the random number generator , error code: "));
+    Serial.print(F("ERROR: Failed to seed the random number generator , error code: "));
     Serial.println(ret);
     teardownCrypto();
     return false;
@@ -58,21 +58,25 @@ int sign(unsigned char *toSign, int toSignLen, unsigned char *buf, size_t *olen)
   if( ( ret = mbedtls_pk_sign( &badgePK, MBEDTLS_MD_SHA256, hash, 0, buf, olen,
                          mbedtls_ctr_drbg_random, &ctr_drbg ) ) != 0 )
   {
-    Serial.print(F("Failed to sign, error code: "));
+    Serial.print(F("ERROR: Failed to sign, error code: "));
     Serial.println(ret);
     return -1;
   }
 }
 
-int verify(unsigned char *toVerify, int toVerifyLen, unsigned char *buf, size_t olen) {
+bool verify(unsigned char *toVerify, int toVerifyLen, unsigned char *sig, size_t sigLen) {
   unsigned char hash[32];
   int ret;
+  Serial.println((char *)toVerify);
+  Serial.printf("toVerifyLen: %d sigLen: %d\r\r\n", toVerifyLen, sigLen);
   mbedtls_sha256_ret(toVerify, toVerifyLen, hash, 0);
   
-  if( ( ret = mbedtls_pk_verify( &nodePK, MBEDTLS_MD_SHA256, hash, 0, buf, olen ) ) != 0 )
+  if( ( ret = mbedtls_pk_verify( &nodePK, MBEDTLS_MD_SHA256, hash, 0, sig, sigLen ) ) != 0 )
   {
-    Serial.print(F("Failed to verify, error code: "));
-    Serial.println(ret);
-    return -1;
+    Serial.print(F("ERROR: Failed to verify, error code: "));
+    Serial.printf("-0x%04x\r\r\n", -ret);
+    return false;
   }
+
+  return true;
 }

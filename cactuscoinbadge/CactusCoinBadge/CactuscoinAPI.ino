@@ -30,7 +30,7 @@ bool submitSignedCoinToAPI(const char *json) {
   WiFi.mode(WIFI_OFF);
 
   if (status != 200 && status != 409) {
-    Serial.print(F("API returned failure status code of "));
+    Serial.print(F("ERROR: API returned failure status code of "));
     Serial.println(status);
     return false;
   }
@@ -39,6 +39,85 @@ bool submitSignedCoinToAPI(const char *json) {
     coinCounter ++;
     
   return true;
+}
+
+bool refreshLocalCoinListFromAPI() {
+  // run every so often to ensure local FS is in sync
+  char CCAPIMessage[MAX_JSON_SIZE];
+  char url[100];
+  char jsonMessage[MAX_JSON_SIZE];
+  StaticJsonBuffer<MAX_JSON_SIZE> jsonBuffer;
+  int pos = 0;
+  int badgeBatchSize = 10;
+  int status;
+  uint16_t coinedBadges[MAX_NUM_BADGES];
+
+  sprintf(url, "http://%s/coin_list/%d", CACTUSCOINAPI_IP, myBadgeID);
+  
+  HTTPClient http;
+  http.begin(url);
+  http.addHeader("Content-Type", "application/json");
+  
+  Serial.printf("Pulling list of coined badges from API.. %s\r\r\n", url);
+  while (pos < MAX_NUM_BADGES) {
+    sprintf(jsonMessage, "{\"start\":%d, \"numBadges\":%d}", pos, badgeBatchSize);
+    signedJsonify((unsigned char *)jsonMessage, strlen(jsonMessage), CCAPIMessage, MAX_JSON_SIZE);
+    status = http.POST(CCAPIMessage);
+    
+    if (status != 200) {
+      Serial.printf("WARN: Bad response (%d) from API when pulling coined badges.\r\r\n", status);
+      break;
+    }
+
+    memset(jsonMessage, 0, sizeof(jsonMessage));
+    getSignedJSONMessage(http.getString().c_str(), jsonMessage, MAX_JSON_SIZE);
+    JsonArray& badgeArray = jsonBuffer.parseArray(jsonMessage);
+
+    for (auto value : badgeArray) {
+      storeCompletedCoinOnFS(value.as<uint16_t>());
+      pos += 1;
+    }
+
+    if (badgeArray.size() != badgeBatchSize)
+      break;
+     
+    memset(jsonMessage, 0, sizeof(jsonMessage));
+  }
+
+  coinCounter = pos;
+}
+
+bool getSignedJSONMessage(const char *httpResponse, char *results, int resultMaxSize) {
+  unsigned char signature[CDP_MODULUS_SIZE];
+  char signatureB64[BASE64_MAX_SIZE];
+  StaticJsonBuffer<MAX_JSON_SIZE * 2> jsonBuffer;
+  JsonObject &root = jsonBuffer.parseObject(httpResponse);
+  size_t sigLen = 0;
+  int messageSize, signatureSize, ret;
+
+  if (!root.containsKey("sig")) {
+    Serial.println(F("ERROR: CactuscoinAPI response did not contain a signature"));
+    return false;
+  }
+
+  if (!root.containsKey("msg")) {
+    Serial.println(F("ERROR: CactuscoinAPI response did not contain a message"));
+    return false;
+  }
+
+  messageSize = strlen(root["msg"]);  
+  if (messageSize > resultMaxSize) // thou shall not overflow thine buffers
+    messageSize = resultMaxSize;
+
+  signatureSize = strlen(root["sig"]);
+  if (signatureSize > BASE64_MAX_SIZE) // my buffer overflowith
+    signatureSize = resultMaxSize;
+
+  strncpy(signatureB64, root["sig"], signatureSize);
+  strncpy(results, root["msg"], resultMaxSize);
+  Serial.println(signatureB64);
+  mbedtls_base64_decode(signature, CDP_MODULUS_SIZE, &sigLen, (byte *)signatureB64, BASE64_MAX_SIZE);
+  return verify((byte *)results, messageSize, signature, sigLen);
 }
 
 

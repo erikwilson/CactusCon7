@@ -21,7 +21,9 @@ bool transmitSignedCoin(uint16_t myBadgeID, byte *csrPtr, int packetSize) {
   jsonifySignedCoin((byte *)&signedCoin, sizeof(signedCoin), json, MAX_JSON_SIZE);
  
   if (!submitSignedCoinToAPI(json)) // mother of all hacks, this should really be in main
-    storeUnsentSignedCoinOnFS(csr->coin.broadcasterID, json);  
+    storeUnsentSignedCoinOnFS(csr->coin.broadcasterID, json); 
+  else
+    storeCompletedCoinOnFS(csr->coin.broadcasterID); 
 
   Serial.print(F("Transmitting signed coin to badge #"));
   Serial.println(signedCoin.csr.coin.CSRID);
