@@ -122,9 +122,9 @@ void updateDisplay() {
   
   display.clear();
   display.setFont(Roboto_Light_15);
-  display.drawString(0, 0, 128, badgeIDMessage);
+  display.drawString(0, 0, badgeIDMessage);
   display.drawString(0, 21, nameMessage);
-  display.drawString(0, 42, 128, coinMessage);
+  display.drawString(0, 42, coinMessage);
   display.display();
 }
 
