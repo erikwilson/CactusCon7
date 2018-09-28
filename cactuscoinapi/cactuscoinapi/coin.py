@@ -69,7 +69,7 @@ class Coin(Resource):
         keys = sorted((coin['broadcasterID'], coin['CSRID']))
 
         if app.redis_store.hget('coins', keys):
-            abort(409, message=signed_jsonify({'status':208, 'message':'coin already submitted'}))
+            abort(409, message=signed_jsonify({'status':409, 'message':'coin already submitted'}))
 
         redis_pipe = app.redis_store.pipeline() # complete the following redis operations atomically
         redis_pipe.hset('coins', keys, int(time.time()))
@@ -78,6 +78,8 @@ class Coin(Resource):
         redis_pipe.zincrby('scoreboard', coin['broadcasterID'])
         redis_pipe.zincrby('scoreboard', coin['CSRID'])
         redis_pipe.execute()
+
+        return signed_jsonify({'status':200, 'mesage':'go go gadget socialization'})
 
         #scoreboard sortedset 
         #badge_N [name] [

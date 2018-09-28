@@ -29,6 +29,8 @@ class Badge(Resource):
 
         redis_pipe.execute()
 
+        return signed_jsonify({'status':200, 'mesage':'ready player {}!'.format(badge_id)})
+
     def validate(self, badge_dict):
         for key in badge_dict:
             try:
