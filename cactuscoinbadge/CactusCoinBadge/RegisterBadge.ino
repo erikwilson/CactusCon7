@@ -27,12 +27,19 @@ bool registerBadge(){
         myName[i] = tmp;
         i ++;
       }
-      return true;
+      if (digitalRead(0)) {
+        return true;
+      }
     }
   }
+ 
+  getNameViaDPAD(myName, MAX_NAME_LENGTH);
 
-  //myName = getNameViaDPAD(); // TODO ERIK: replace with call to do dpad and return users name here (should be no larger than MAX_NAME_LENGTH)
-  sprintf(myName, "cybaix%d", myBadgeID);
+  display.clear();
+  display.setFont(Roboto_Light_15);
+  display.drawStringMaxWidth(0, 24, 128, "Registering...");
+  display.display();
+
   JsonObject &root = jsonBuffer.createObject();
   root["name"] = myName;
   root.printTo(json, MAX_JSON_SIZE);

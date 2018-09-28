@@ -5,6 +5,7 @@
 #include <LoRa.h>
 #include <WiFi.h>
 #include <SSD1306.h>
+#include "Font.h"
 #include "mbedtls/pk.h"
 #include "mbedtls/error.h"
 #include "mbedtls/entropy.h"
@@ -50,10 +51,20 @@ void setup() {
   delay(50);
   digitalWrite(16, HIGH); // while OLED is running, must set GPIO16 in high
 
+  touchSetCycles(0xA00, 0x2000);
+  setupPrintable();
+
   display.init();
   display.flipScreenVertically();
   display.setTextAlignment(TEXT_ALIGN_LEFT);
+  display.setBrightness(20);
+
   display.clear();
+  display.setFont(Roboto_Light_11);
+  display.drawStringMaxWidth(0, 0, 128, "<- hold to change name");
+  display.setFont(Roboto_Light_15);
+  display.drawStringMaxWidth(0, 24, 128, "Connecting...");
+  display.display();
 
   if (!setupFS()) {
     catastrophicFailure = true;
@@ -73,6 +84,12 @@ void setup() {
     return;
   }
   
+  display.clear();
+  display.setFont(Roboto_Light_15);
+  display.drawStringMaxWidth(0, 12, 128, "Reticulating Splines...");
+  display.setFont(Roboto_Light_11);
+  display.display();
+
   refreshLocalCoinListFromAPI();
 
   turnWiFiOff();
@@ -93,8 +110,8 @@ void setup() {
 
 void updateDisplay() {
   char badgeIDMessage[20], nameMessage[MAX_NAME_LENGTH + 6], coinMessage[13];
-
   if (catastrophicFailure) {
+    display.setFont(ArialMT_Plain_10);
     display.clear();
     display.drawStringMaxWidth(0, 0, 128, F("Problem bootstrapping badge.  Get closer to WiFi, see a volunteer, or plug me in and start hacking to fix it yourself :)."));
     display.display();
@@ -106,9 +123,10 @@ void updateDisplay() {
   sprintf(coinMessage, "Coins: %d", coinCounter);
   
   display.clear();
+  display.setFont(Roboto_Light_15);
   display.drawStringMaxWidth(0, 0, 128, badgeIDMessage);
-  display.drawStringMaxWidth(0, 15, 128, nameMessage);
-  display.drawStringMaxWidth(0, 30, 128, coinMessage);
+  display.drawStringMaxWidth(0, 21, 128, nameMessage);
+  display.drawStringMaxWidth(0, 42, 128, coinMessage);
   display.display();
 }
 
