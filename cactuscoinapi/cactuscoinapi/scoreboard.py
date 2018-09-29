@@ -12,4 +12,12 @@ class Scoreboard(Resource):
         # TODO: This still needs to get badge names
         scores = app.redis_store.zrevrangebyscore('scoreboard', '+inf', '-inf', withscores=True)
         scores = [(x[0].decode('utf8'), x[1]) for x in scores]
+
+        redis_pipe = app.redis_store.pipeline()
+        for s in scores:
+            redis_pipe.hget('badge_names', s[0])
+
+        results = redis_pipe.execute()
+        scores = [(x[0], y.decode('utf8'), x[1]) for x,y in zip(scores, results)]
+
         return jsonify({'scoreboard':scores})

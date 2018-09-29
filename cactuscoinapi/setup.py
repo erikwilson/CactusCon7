@@ -8,7 +8,8 @@ setup(
         'flask',
         'flask-redis',
         'flask-restful',
-        'cryptography'
+        'cryptography',
+        'flask-cors'
     ],
     setup_requires=[
         'pytest',

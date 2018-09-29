@@ -2,12 +2,14 @@ import json
 from flask import Flask, request, jsonify
 from flask_restful import reqparse, abort, Resource, Api
 from flask_redis import FlaskRedis
+from flask_cors import CORS
 from . import crypto, badge, coin, scoreboard, db, keys, coin_paginated
 
 def create_app(test_config=None):
     global conference_key, badge_keys
     app = Flask(__name__)
     api = Api(app)
+    CORS(app)
 
     #app.config.from_object('yourapplication.default_settings')
 

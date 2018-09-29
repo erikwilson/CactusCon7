@@ -8,7 +8,24 @@
     <!-- Bootstrap CSS -->
     <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.1.3/css/bootstrap.min.css" integrity="sha384-MCw98/SFnGE8fJT3GXwEOngsV7Zt27NXFoaoApmYm81iuXoPkFOJwJ8ERdknLPMO" crossorigin="anonymous">
     <link href="dashboard.css" rel="stylesheet">
+    <script src="https://code.jquery.com/jquery-3.3.1.js" integrity="sha256-2Kok7MbOyxpgUVvAk/HJ2jigOSYS2auK4Pfzbm7uH60=" crossorigin="anonymous"></script>
     <title>CactusCoin</title>
+        <script>
+    $( document ).ready(function() {
+       $.ajax({ url: "http://10.77.77.122:5000/scoreboard", success: function(data) {
+		$('#leaderboard tbody tr').remove();
+                    var html = '';
+                    for (var i = 0; i < data.scoreboard.length; i++) 
+                            html += '<tr><td>' + (i + 1) + '</td><td>' + data.scoreboard[i][0] +
+                                    '</td><td>' + data.scoreboard[i][1] + '</td><td>' + data.scoreboard[i][2] + '</td></tr>';
+                    
+                    $('#leaderboard tbody').after(html);
+       }, dataType: "json" });
+        console.log( "window loaded" );
+    });
+
+  </script>
+  <meta http-equiv="refresh" content="10">
   </head>
   <body>
     <nav class="navbar-dark fixed-top bg-dark flex-md-nowrap p-0 shadow">
@@ -17,76 +34,16 @@
       <main role="main" align="center">
         <div class="table-bordered col-sm-6" align="center">
           <h2>Leaderboard</h2>
-          <table class="table table-striped table-sm">
+          <table class="table table-striped table-sm" id="leaderboard">
             <thead>
               <tr>
-                <th></th>
                 <th>Rank</th>
+                <th>Badge ID</th>
                 <th>Name</th>
                 <th>Coin</th>
               </tr>
             </thead>
             <tbody>
-              <tr>
-                <td></td>
-                <td>1</td>
-                <td>user12345</td>
-                <td>4242</td>
-              </tr>
-              <tr>
-                <td></td>
-                <td>2</td>
-                <td>user12345</td>
-                <td>2341</td>
-              </tr>
-              <tr>
-                <td></td>
-                <td>3</td>
-                <td>user12345</td>
-                <td>633</td>
-              </tr>
-              <tr>
-                <td></td>
-                <td>4</td>
-                <td>user12345</td>
-                <td>512</td>
-              </tr>
-              <tr>
-                <td></td>
-                <td>5</td>
-                <td>user12345</td>
-                <td>456</td>
-              </tr>
-              <tr>
-                <td></td>
-                <td>6</td>
-                <td>user12345</td>
-                <td>444</td>
-              </tr>
-              <tr>
-                <td></td>
-                <td>7</td>
-                <td>user12345</td>
-                <td>442</td>
-              </tr>
-              <tr>
-                <td></td>
-                <td>8</td>
-                <td>user12345</td>
-                <td>424</td>
-              </tr>
-              <tr>
-                <td></td>
-                <td>9</td>
-                <td>user12345</td>
-                <td>422</td>
-              </tr>
-              <tr>
-                <td></td>
-                <td>10</td>
-                <td>user12345</td>
-                <td>42</td>
-              </tr>
             </tbody>
           </table>
         </div>
@@ -94,7 +51,6 @@
     </div>
     <!-- Optional JavaScript -->
     <!-- jQuery first, then Popper.js, then Bootstrap JS -->
-    <script src="https://code.jquery.com/jquery-3.3.1.slim.min.js" integrity="sha384-q8i/X+965DzO0rT7abK41JStQIAqVgRVzpbzo5smXKp4YfRvH+8abtTE1Pi6jizo" crossorigin="anonymous"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/popper.js/1.14.3/umd/popper.min.js" integrity="sha384-ZMP7rVo3mIykV+2+9J3UJ46jBk0WLaUAdn689aCwoqbBJiSnjAK/l8WvCWPIPm49" crossorigin="anonymous"></script>
     <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.1.3/js/bootstrap.min.js" integrity="sha384-ChfqqxuZUCnJSK3+MXmPNIyE6ZbWh2IMqE241rYiqJxyMiZ6OW/JmZQ5stwEULTy" crossorigin="anonymous"></script>
   </body>
