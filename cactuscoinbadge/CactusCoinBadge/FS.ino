@@ -118,7 +118,7 @@ void drainSignedCoinPendingTXLogOnFS() {
     if (coin.length() == 1)
       continue;  // nothing to do here, this coin has already been submitted
     
-    if (!!submitSignedCoinToAPI(coin.c_str())) {
+    if (!submitSignedCoinToAPI(coin.c_str())) {
       tmpTXLog.println(otherBadgeID);
       coinFile.close();
     } else {
