@@ -4,7 +4,7 @@
 #define CDP_SIGNEDCOIN_TYPE 0x03
 
 #define BROADCAST_TIME_SEC 30
-#define CSR_RSSI_THRESHOLD -85
+#define CSR_RSSI_THRESHOLD -120
 #define BADGE_TX_POWER 1
 
 #define UNSUBMITTED_COIN_PATH "/unsubmitted.lst"
