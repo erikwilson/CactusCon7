@@ -104,7 +104,13 @@ void drainSignedCoinPendingTXLogOnFS() {
     }
 
     coin = coinFile.readStringUntil('\n');
-    if (!coin.length() == 3 && !submitSignedCoinToAPI(coin.c_str())) {  // len of 3 indicates coin must have already been submitted
+    Serial.print("Coin length: ");
+    Serial.println(coin.length());
+
+    if (coin.length() == 1)
+      continue;  // nothing to do here, this coin has already been submitted
+    
+    if (!!submitSignedCoinToAPI(coin.c_str())) {
       tmpTXLog.println(otherBadgeID);
       coinFile.close();
     } else {

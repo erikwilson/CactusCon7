@@ -6,19 +6,6 @@ bool submitSignedCoinToAPI(const char *json) {
   int status;
 
   sprintf(url, "http://%s/coin/%d", CACTUSCOINAPI_IP, myBadgeID);
-  WiFi.mode(WIFI_STA);
-  WiFi.begin(WLAN_SSID, WLAN_PASSWD);
-
-  Serial.print(F("Bringing up wifi please wait"));
-  while (WiFi.status() != WL_CONNECTED) {
-    delay(500);
-    Serial.print(".");
-  }
-  
-  IPAddress ip = WiFi.localIP();
-  Serial.println(F("DONE"));
-  Serial.print(F("My IP address:"));
-  Serial.println(ip);
 
   // wtf why doesn arduino have a max arg for strlen?!?!
   signedJsonify((unsigned char*)json, strlen(json), CCAPIMessage, MAX_JSON_SIZE * 2);
@@ -30,24 +17,29 @@ bool submitSignedCoinToAPI(const char *json) {
   http.addHeader("Content-Type", "application/json");
   http.POST(CCAPIMessage);
   
-  getSignedJSONMessage(http.getString().c_str(), jsonResponse, MAX_JSON_SIZE);
+  if (!getSignedJSONMessage(http.getString().c_str(), jsonResponse, MAX_JSON_SIZE)) {
+    Serial.println(F("ERROR: Failed to get a signed message back from the API."));
+    return false;
+  }
   JsonObject &root = jsonBuffer.parseObject(jsonResponse);
 
   if (!root.containsKey("status")) {
     Serial.println(F("ERROR: Expected a status key from API, but it wasn't there"));
     return false;
-  }
+  }\
   
-  WiFi.mode(WIFI_OFF);
+  if (!root.containsKey("balance")) {
+    Serial.println(F("ERROR: Expected a balance key from API, but it wasn't there"));
+    return false;
+  }
+
+  coinCounter = root["balance"];
   
   if (root["status"] != 200 && root["status"] != 409) {
     Serial.print(F("ERROR: API returned failure status code of "));
     Serial.println(status);
     return false;
   }
-  
-  if (root["status"] != 409)
-    coinCounter ++;
   
   return true;
 }
@@ -60,7 +52,7 @@ bool refreshLocalCoinListFromAPI() {
   StaticJsonBuffer<MAX_JSON_SIZE> jsonBuffer;
   int pos = 0;
   int badgeBatchSize = 10;
-  int status;
+  int status = -1;
   uint16_t coinedBadges[MAX_NUM_BADGES];
 
   sprintf(url, "http://%s/coin_list/%d", CACTUSCOINAPI_IP, myBadgeID);
@@ -99,7 +91,8 @@ bool refreshLocalCoinListFromAPI() {
     memset(jsonMessage, 0, sizeof(jsonMessage));
   }
 
-  coinCounter = pos;
+  if (status != -1)
+    coinCounter = pos;
 }
 
 bool getSignedJSONMessage(const char *httpResponse, char *results, int resultMaxSize) {

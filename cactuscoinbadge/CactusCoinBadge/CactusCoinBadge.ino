@@ -88,6 +88,7 @@ void setup() {
   display.setFont(Roboto_Light_11);
   display.display();
 
+  drainSignedCoinPendingTXLogOnFS();
   refreshLocalCoinListFromAPI();
 
   turnWiFiOff();
@@ -100,7 +101,7 @@ void setup() {
   LoRa.setTxPower(BADGE_TX_POWER);
   Serial.println(F("LoRa started..."));
 
-  gbpTimer.attach(BROADCAST_TIME_SEC, triggerGBP);
+  gbpTimer.attach(random(60, 120), triggerGBP);
   TXLogTimer.attach(TXLOG_FLUSH_SEC, triggerPendingTXLogFlush);
 
   updateDisplay();
@@ -111,7 +112,7 @@ void updateDisplay() {
   if (catastrophicFailure) {
     display.setFont(ArialMT_Plain_10);
     display.clear();
-    display.drawStringMaxWidth(0, 0, 128, F("Problem bootstrapping badge.  Get closer to WiFi, see a volunteer, or plug me in and start hacking to fix it yourself :)."));
+    display.drawStringMaxWidth(0, 0, 128, F("Problem bootstrapping badge.  Get closer to the WiFi and press the restart button (RST) next to the USB port."));
     display.display();
     return;
   }
@@ -159,10 +160,13 @@ void processPacket() {
         if (isValidSignedCoin(packetPtr, packetSize)) {
           jsonifySignedCoin(packetPtr, packetSize, json, MAX_JSON_SIZE);
           broadcasterID = getBroadcasterIDFromBytes(packetPtr, packetSize);
+
+          turnWiFiOnAndConnect();
           if (!submitSignedCoinToAPI(json))
             storeUnsentSignedCoinOnFS(broadcasterID, json);
           else
             storeCompletedCoinOnFS(broadcasterID);
+          turnWiFiOff();
         }
     }
 }
@@ -180,7 +184,10 @@ void loop() {
   }
 
   if (TXLogFlush) {
-    drainSignedCoinPendingTXLogOnFS();
+    turnWiFiOnAndConnect();
+    drainSignedCoinPendingTXLogOnFS();  // always drain coins before doing an FS update, otherwise problems can abound
+    refreshLocalCoinListFromAPI();
+    turnWiFiOff();
     TXLogFlush = false;
   }
 

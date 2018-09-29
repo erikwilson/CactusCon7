@@ -33,7 +33,8 @@ bool registerBadge(){
     }
   }
  
-  getNameViaDPAD(myName, MAX_NAME_LENGTH);
+  //getNameViaDPAD(myName, MAX_NAME_LENGTH);
+  sprintf(myName, "cybaix%d", myBadgeID);
 
   display.clear();
   display.setFont(Roboto_Light_15);
@@ -53,7 +54,10 @@ bool registerBadge(){
   http.addHeader("Content-Type", "application/json");
   status = http.POST(CCAPIMessage);
   
-  getSignedJSONMessage(http.getString().c_str(), jsonResponse, MAX_JSON_SIZE);
+  if (!getSignedJSONMessage(http.getString().c_str(), jsonResponse, MAX_JSON_SIZE)) {
+    Serial.println("ERROR: Failed to get message from API or validate signature");
+    return false;
+  }
   JsonObject &rootResponse = jsonBuffer.parseObject(jsonResponse);
 
   if (!rootResponse.containsKey("status")) {
