@@ -15,6 +15,5 @@ ENV LANG C.UTF-8
 ENV CACTUSCONAPI_SETTINGS_FILE cactuscoinapi.cfg
 ENV FLASK_APP cactuscoinapi
 
-EXPOSE 5000
 ENTRYPOINT [ "flask" ]
 CMD [ "run", "-h", "0.0.0.0" ]
