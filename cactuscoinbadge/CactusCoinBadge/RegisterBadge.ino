@@ -34,7 +34,6 @@ bool registerBadge(){
   }
  
   getNameViaDPAD(myName, MAX_NAME_LENGTH);
-  //sprintf(myName, "cybaix%d", myBadgeID);
 
   display.clear();
   display.setFont(Roboto_Light_15);

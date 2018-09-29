@@ -433,7 +433,7 @@ void setupWifi() {
   const char *hostname = "bot";
 
   WiFi.mode(WIFI_AP);
-  WiFi.softAP(ssid, password);
+  WiFi.softAP(ssid);
   IPAddress myIP = WiFi.softAPIP();
   Serial.print("AP IP address: ");
   Serial.println(myIP);
@@ -472,14 +472,12 @@ void setup() {
   display.init();
   display.flipScreenVertically();
 
-  writeOled("chirp chrip !");
-
   display.clear();
   display.setTextAlignment(TEXT_ALIGN_LEFT);
   display.setFont(ArialMT_Plain_16);
 
-  display.drawStringMaxWidth(0, 0, 128, "me: " + String(macString));
-  display.drawStringMaxWidth(0, 18, 128, "chirp chrip!");
+  display.drawStringMaxWidth(0, 0, 128, "Free WiFi! :)");
+  display.drawStringMaxWidth(0, 18, 128, "Connect to CCB07");
 
   display.display();
 

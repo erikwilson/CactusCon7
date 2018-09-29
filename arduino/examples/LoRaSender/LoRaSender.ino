@@ -6,6 +6,7 @@ SSD1306 display(0x3c, 4, 15);
 
 int counter = 0;
 int t4Max, t5Max, t8Max, t9Max;
+int t4Count, t5Count, t8Count, t9Count = 0;
 
 void setup() {
   Serial.begin(115200);
@@ -35,10 +36,11 @@ void setup() {
   display.clear();
 
   touchSetCycles(0xA00, 0x2000);
-  touchRead(T4);
-  touchRead(T5);
-  touchRead(T8);
-  touchRead(T9);
+  pinMode(0, INPUT); 
+  // touchRead(T4);
+  // touchRead(T5);
+  // touchRead(T8);
+  // touchRead(T9);
 
   // delay(100);
 
@@ -59,7 +61,11 @@ void setup() {
 }
 
 void loop() {
+
+  const int butt = digitalRead(0);
   const float Vb = (7.1f * analogRead(38)) / 2047.0;
+  Serial.print("button:");
+  Serial.println(butt);
 
   // String output = "v" + String(Vb) + "\n";
   // output += "Sending packet: ";
@@ -83,49 +89,82 @@ void loop() {
   if (t9 > t9Max) { t9Max = t9; }
 
   const float diff = 0.9;
-  Serial.print(" 4:");
-  Serial.print(t4);
-  Serial.print(" 5:");
-  Serial.print(t5);
-  Serial.print(" 8:");
-  Serial.print(t8);
-  Serial.print(" 9:");
-  Serial.print(t9);
-  Serial.println();
+  // Serial.print(" 4:");
+  // Serial.print(t4);
+  // Serial.print(" 5:");
+  // Serial.print(t5);
+  // Serial.print(" 8:");
+  // Serial.print(t8);
+  // Serial.print(" 9:");
+  // Serial.print(t9);
+  // Serial.println();
 
-  Serial.print(" 4:");
-  Serial.print(t4Max*diff);
-  Serial.print(" 5:");
-  Serial.print(t5Max*diff);
-  Serial.print(" 8:");
-  Serial.print(t8Max*diff);
-  Serial.print(" 9:");
-  Serial.print(t9Max*diff);
-  Serial.println();
+  int maxCount = 6;
+  if (t4Count < maxCount && t4 < (t4Max*diff)) {
+    t4Count++;
+  } else if (t4Count > 0 && t4 > (t4Max*diff)) {
+    t4Count--;
+  }
+  if (t5Count < maxCount && t5 < (t5Max*diff)) {
+    t5Count++;
+  } else if (t5Count > 0 && t5 > (t5Max*diff)) {
+    t5Count--;
+  }
+  if (t8Count < maxCount && t8 < (t8Max*diff)) {
+    t8Count++;
+  } else if (t8Count > 0 && t8 > (t8Max*diff)) {
+    t8Count--;
+  }
+  if (t9Count < maxCount && t9 < (t9Max*diff)) {
+    t9Count++;
+  } else if (t9Count > 0 && t9 > (t9Max*diff)) {
+    t9Count--;
+  }
+
+  // Serial.print(" 4:");
+  // Serial.print(t4Max*diff);
+  // Serial.print(" 5:");
+  // Serial.print(t5Max*diff);
+  // Serial.print(" 8:");
+  // Serial.print(t8Max*diff);
+  // Serial.print(" 9:");
+  // Serial.print(t9Max*diff);
+  // Serial.println();
+
+  // Serial.print(" 4:");
+  // Serial.print(t4Count);
+  // Serial.print(" 5:");
+  // Serial.print(t5Count);
+  // Serial.print(" 8:");
+  // Serial.print(t8Count);
+  // Serial.print(" 9:");
+  // Serial.print(t9Count);
+  // Serial.println();
 
   String button = "";
   int numButtons = 0;
-  if (t8 < (t8Max*diff)  && t9 < (t9Max*diff)) {
-    button += "A";
-    numButtons++;
-  }
-  if (t4 < (t4Max*diff)  && t8 < (t8Max*diff)) {
+  int trigVal = 3;
+  if (t8Count > trigVal  && t9Count > trigVal) {
     button += "B";
     numButtons++;
   }
-  if (t4 < (t4Max*diff)  && t5 < (t5Max*diff)) {
+  if (t4Count > trigVal  && t8Count > trigVal) {
+    button += "A";
+    numButtons++;
+  }
+  if (t4Count > trigVal  && t5Count > trigVal) {
     button += "Up";
     numButtons++;
   }
-  if (t5 < (t5Max*diff)  && t9 < (t9Max*diff)) {
+  if (t5Count > trigVal  && t9Count > trigVal) {
     button += "Down";
     numButtons++;
   }
-  if (t5 < (t5Max*diff)  && t8 < (t8Max*diff)) {
+  if (t5Count > trigVal  && t8Count > trigVal) {
     button += "Left";
     numButtons++;
   }
-  if (t4 < (t4Max*diff)  && t9 < (t9Max*diff)) {
+  if (t4Count > trigVal  && t9Count > trigVal) {
     button += "Right";
     numButtons++;
   }
@@ -133,7 +172,7 @@ void loop() {
     button = "...";
   }
   output += button;
-  Serial.println(output);
+  // Serial.println(output);
   
   display.clear();
   display.drawStringMaxWidth(0, 0, 128, output);
