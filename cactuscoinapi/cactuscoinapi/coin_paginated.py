@@ -18,7 +18,7 @@ class CoinList(Resource):
         try:
             self.validate(request)
         except ValueError as ex:
-            abort(400, message=signed_jsonify({'status':400, 'message':str(ex)}))
+            return signed_jsonify({'status':400, 'message':str(ex)})
 
         start = request['start']
         num_badges = request['numBadges'] - 1 # stupid redis lists are inclusive at the end
@@ -29,7 +29,7 @@ class CoinList(Resource):
             badges = [int(i) for i in badges]
         except (ValueError, TypeError):
             msg = 'no coins yet.. stop being so anti-social'
-            abort(404, message=signed_jsonify({'status':404, 'message':msg}))
+            return signed_jsonify({'status':404, 'message':msg})
 
         return signed_jsonify(badges)
 
