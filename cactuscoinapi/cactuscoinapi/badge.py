@@ -24,8 +24,8 @@ class Badge(Resource):
         redis_pipe = app.redis_store.pipeline()
         redis_pipe.hset('badge_names', badge_id, message['name'])
 
-        if app.redis_store.hget('badge_names', badge_id) is None:
-            redis_pipe.zincrby('scoreboard', badge_id)
+        #if app.redis_store.hget('badge_names', badge_id) is None:
+        #    redis_pipe.zincrby('scoreboard', badge_id)
 
         redis_pipe.execute()
 
