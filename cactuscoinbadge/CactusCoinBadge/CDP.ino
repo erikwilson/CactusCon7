@@ -63,7 +63,6 @@ bool transmitCoinSigningRequest(uint16_t myBadgeID, byte *gbpPtr, int packetSize
       Serial.print(gbp->badgeID);
       Serial.print(F(" RSSI: "));
       Serial.println(packetRssi);
-      return false;
   }
 
   if (ifCoinExistsOnFS(gbp->badgeID)) {  // this is just getting stupid messy at this point
