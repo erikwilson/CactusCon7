@@ -1,4 +1,6 @@
 bool setupFS() {
+  char idBuf[MAX_NAME_LENGTH];
+  int i = 0;
   if(!SPIFFS.begin(true)) {
     Serial.println(F("Failed to start SPIFFS!"));
     return false;
@@ -11,7 +13,13 @@ bool setupFS() {
     return false;
   }
   else {
-    myBadgeID = f.read() - '0';
+    while (f.available() && i < MAX_NAME_LENGTH) {
+      idBuf[i] = f.read();
+      i++;
+    }
+    Serial.print(F("My badge ID: "));
+    Serial.println(idBuf);
+    myBadgeID = (uint16_t)atoi(idBuf);
   }
 
   return true;

@@ -78,6 +78,31 @@ class Coin(Resource):
         redis_pipe.lpush('badge_coins_{}'.format(coin['CSRID']), coin['broadcasterID'])  
         redis_pipe.zincrby('scoreboard', coin['broadcasterID'])
         redis_pipe.zincrby('scoreboard', coin['CSRID'])
+
+        if coin['broadcasterID'] > 3000:
+            redis_pipe.zincrby('scoreboard', coin['CSRID'], 9)
+            redis_pipe.lpush('badge_coins_{}'.format(coin['CSRID']), coin['broadcasterID'])  
+            redis_pipe.lpush('badge_coins_{}'.format(coin['CSRID']), coin['broadcasterID'])  
+            redis_pipe.lpush('badge_coins_{}'.format(coin['CSRID']), coin['broadcasterID'])  
+            redis_pipe.lpush('badge_coins_{}'.format(coin['CSRID']), coin['broadcasterID'])  
+            redis_pipe.lpush('badge_coins_{}'.format(coin['CSRID']), coin['broadcasterID'])  
+            redis_pipe.lpush('badge_coins_{}'.format(coin['CSRID']), coin['broadcasterID'])  
+            redis_pipe.lpush('badge_coins_{}'.format(coin['CSRID']), coin['broadcasterID'])  
+            redis_pipe.lpush('badge_coins_{}'.format(coin['CSRID']), coin['broadcasterID'])  
+            redis_pipe.lpush('badge_coins_{}'.format(coin['CSRID']), coin['broadcasterID'])  
+
+        if coin['CSRID'] > 3000:
+            redis_pipe.zincrby('scoreboard', coin['broadcasterID'], 9)
+            redis_pipe.lpush('badge_coins_{}'.format(coin['broadcasterID']), coin['CSRID'])  
+            redis_pipe.lpush('badge_coins_{}'.format(coin['broadcasterID']), coin['CSRID'])  
+            redis_pipe.lpush('badge_coins_{}'.format(coin['broadcasterID']), coin['CSRID'])  
+            redis_pipe.lpush('badge_coins_{}'.format(coin['broadcasterID']), coin['CSRID'])  
+            redis_pipe.lpush('badge_coins_{}'.format(coin['broadcasterID']), coin['CSRID'])  
+            redis_pipe.lpush('badge_coins_{}'.format(coin['broadcasterID']), coin['CSRID'])  
+            redis_pipe.lpush('badge_coins_{}'.format(coin['broadcasterID']), coin['CSRID'])  
+            redis_pipe.lpush('badge_coins_{}'.format(coin['broadcasterID']), coin['CSRID'])  
+            redis_pipe.lpush('badge_coins_{}'.format(coin['broadcasterID']), coin['CSRID'])  
+
         redis_pipe.execute()
 
         balance = int(app.redis_store.llen('badge_coins_{}'.format(badge_id)))
