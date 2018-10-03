@@ -1,22 +1,9 @@
-//#include <Adafruit_NeoPixel.h>
-
 #include <LoRa.h>
 #include <Arduino.h>
 #include <SSD1306.h>
 
 #include <math.h>
 #include <algorithm>
-
-// #define AUTO_PIXEL_PIN 13
-// #define CONTROL_PIXEL_PIN 12
-//
-// Adafruit_NeoPixel autostrip = Adafruit_NeoPixel(3, AUTO_PIXEL_PIN, NEO_GRB + NEO_KHZ800);
-// Adafruit_NeoPixel controlstrip = Adafruit_NeoPixel(3, CONTROL_PIXEL_PIN, NEO_GRB + NEO_KHZ800);
-
-#include <BLEDevice.h>
-#include <BLEUtils.h>
-#include <BLEServer.h>
-#include <BLE2902.h>
 
 #include <SPIFFS.h>
 #include <AsyncTCP.h>
@@ -57,7 +44,7 @@ char spaces[] = "                                                               
 #define SS      18
 #define RST     14
 #define DI0     26
-#define BAND    470E6  //915E6 -- 这里的模式选择中，检查一下是否可在中国实用915这个频段
+#define BAND    433E6  //915E6 -- 这里的模式选择中，检查一下是否可在中国实用915这个频段
 
 #define PWMA_CH 1
 #define PWMA    15
@@ -82,49 +69,12 @@ int drawY = 0;
 
 int tick = 0;
 
-volatile char message[255];
-volatile bool messageIdle = true;
-
-BLECharacteristic *pSerialChar;
-
-void writeOled(String message) {
-  display.clear();
-  display.setTextAlignment(TEXT_ALIGN_LEFT);
-  if (fontSize == 10) {
-    display.setFont(ArialMT_Plain_10);
-  }
-  else if (fontSize == 16) {
-    display.setFont(ArialMT_Plain_16);
-  }
-  else if (fontSize == 24) {
-    display.setFont(ArialMT_Plain_24);
-  }
-
-  display.drawStringMaxWidth(drawX, drawY, 128, message);
-  display.display();
-}
-
 void ledcAnalogWrite(uint8_t channel, uint32_t value, uint32_t valueMax = 255) {
   // calculate duty, 8191 from 2 ^ 13 - 1
   uint32_t duty = (8191 / valueMax) * std::min(value, valueMax);
-
   // write duty to LEDC
   ledcWrite(channel, duty);
 }
-
-class LoraCallbacks: public BLECharacteristicCallbacks {
-  void onWrite(BLECharacteristic *pCharacteristic) {
-    std::string value = pCharacteristic->getValue();
-    int len = value.length();
-    if (value.length() > 0 && messageIdle) {
-      for (int i = 0; i < len; i++) {
-        message[i] = value[i];
-      }
-      message[len] = '\0';
-      messageIdle = false;
-    }
-  }
-};
 
 void move(uint8_t mode, uint8_t motorL, uint8_t motorR) {
   uptime = millis();
@@ -205,58 +155,6 @@ void onReceive(int packetSize) {
 
   display.display();
 }
-
-class MoveCallbacks: public BLECharacteristicCallbacks {
-    void onWrite(BLECharacteristic *pCharacteristic) {
-      std::string value = pCharacteristic->getValue();
-
-      Serial.println("got MoveCallbacks packet!");
-      if (value.length() != 3) {
-        Serial.println("Invalid value length");
-        return;
-      }
-      move(value[0],value[1],value[2]);
-    }
-};
-
-class MySecurity : public BLESecurityCallbacks {
-
-  uint32_t onPassKeyRequest(){
-    Serial.println("PassKeyRequest");
-    return 123456;
-  }
-  void onPassKeyNotify(uint32_t pass_key){
-    Serial.print("On passkey Notify number:");
-    Serial.println(pass_key);
-    if (pass_key > 999999) {
-      Serial.println("key bigger than 6 digits!");
-      writeOled("passkey too large!");
-      return;
-    }
-    char buf[7] = {0,0,0,0,0,0,0};
-    snprintf(buf, 7, "%06d", pass_key);
-    writeOled("BLE passkey: " + String(buf));
-  }
-  bool onConfirmPIN(uint32_t){
-    Serial.println("onConfirmPIN");
-    return true;
-  }
-  bool onSecurityRequest(){
-    Serial.println("On Security Request");
-    return true;
-  }
-
-  void onAuthenticationComplete(esp_ble_auth_cmpl_t cmpl){
-    Serial.println("Starting BLE work!");
-    if(cmpl.success){
-      writeOled("BLE connected!");
-      uint16_t length;
-      esp_ble_gap_get_whitelist_size(&length);
-      Serial.print("size:");
-      Serial.println(length);
-    }
-  }
-};
 
 void onWsEvent(AsyncWebSocket * server, AsyncWebSocketClient * client, AwsEventType type, void * arg, uint8_t *data, size_t len){
   //Handle WebSocket event
@@ -354,62 +252,8 @@ uint8_t* getMotorMove(
   return result;
 }
 
-void setupBle() {
-
-  BLEDevice::init(macString);
-  BLEDevice::setPower(ESP_PWR_LVL_P7);
-  esp_ble_tx_power_set(ESP_BLE_PWR_TYPE_DEFAULT, ESP_PWR_LVL_P7);
-
-  BLEServer *pServer = BLEDevice::createServer();
-
-  // BLEDevice::setEncryptionLevel(ESP_BLE_SEC_ENCRYPT_NO_MITM);
-  // BLEDevice::setSecurityCallbacks(new MySecurity());
-
-  BLEService *serialService = pServer->createService(SERIAL_SERVICE_UUID);
-
-  pSerialChar = serialService->createCharacteristic(
-    LORA_CHAR_UUID,
-    BLECharacteristic::PROPERTY_READ      |
-    BLECharacteristic::PROPERTY_WRITE     |
-    BLECharacteristic::PROPERTY_NOTIFY    |
-    BLECharacteristic::PROPERTY_INDICATE  |
-    BLECharacteristic::PROPERTY_BROADCAST |
-    BLECharacteristic::PROPERTY_WRITE_NR
-  );
-  pSerialChar->setCallbacks(new LoraCallbacks());
-
-  BLECharacteristic *iotdfRGBChar = serialService->createCharacteristic(
-    MOVE_CHAR_UUID,
-    BLECharacteristic::PROPERTY_WRITE_NR
-  );
-  iotdfRGBChar->setCallbacks(new MoveCallbacks());
-
-  BLE2902* p2902Descriptor = new BLE2902();
-  p2902Descriptor->setNotifications(true);
-  p2902Descriptor->setAccessPermissions(ESP_GATT_PERM_READ_ENCRYPTED | ESP_GATT_PERM_WRITE_ENCRYPTED);
-
-  pSerialChar->setAccessPermissions(ESP_GATT_PERM_READ_ENCRYPTED | ESP_GATT_PERM_WRITE_ENCRYPTED);
-  pSerialChar->addDescriptor(p2902Descriptor);
-
-  // BLESecurity *pSecurity = new BLESecurity();
-  // pSecurity->setAuthenticationMode(ESP_LE_AUTH_REQ_SC_BOND);
-  // pSecurity->setCapability(ESP_IO_CAP_OUT);
-  // pSecurity->setInitEncryptionKey(ESP_BLE_ENC_KEY_MASK | ESP_BLE_ID_KEY_MASK);
-
-  //  pSerialChar->setValue("Hello World");
-  // Start the service
-  pServer->getAdvertising()->addServiceUUID(SERIAL_SERVICE_UUID);
-  serialService->start();
-
-  // Start advertising
-  pServer->getAdvertising()->start();
-
-}
-
 void setupLora() {
-  // SPI.begin(5, 19, 27, 18);
   LoRa.setPins(SS, RST, DI0);
-  //  Serial.println("LoRa Sender");
 
   if (!LoRa.begin(BAND)) {
     Serial.println("Starting LoRa failed!");
@@ -452,12 +296,8 @@ void setupWifi() {
 }
 
 void setup() {
-
-  message[0] = '\0';
-
   Serial.begin(115200);
   while (!Serial); //If just the the basic function, must connect to a computer
-
 
   uint8_t chipid[6];
   esp_efuse_read_mac(chipid);
@@ -481,11 +321,6 @@ void setup() {
 
   display.display();
 
-  // delay(3000);
-  // display.displayOff();
-  // display.end();
-  // digitalWrite(16, LOW);    // set GPIO16 low to reset OLED
-
   pinMode(AI1, OUTPUT);
   pinMode(AI2, OUTPUT);
   pinMode(BI1, OUTPUT);
@@ -502,16 +337,6 @@ void setup() {
   ledcAttachPin(PWMB, PWMB_CH);
 
   setupWifi();
-
-  // autostrip.begin();
-  // controlstrip.begin();
-
-  // LoRa.beginPacket();
-  // LoRa.print(macString);
-  // LoRa.print("|chirp!");
-  // LoRa.endPacket();
-
-  setupTouch();
 }
 
 void redirect(AsyncWebServerRequest *request){
@@ -529,85 +354,9 @@ void parsePacket() {
   }
 }
 
-int touchThreshold = 35;
-static volatile bool touched[10] = {};
-
-void IRAM_ATTR gotTouched0() { touched[0] = true; }
-void IRAM_ATTR gotTouched1() { touched[1] = true; }
-void IRAM_ATTR gotTouched2() { touched[2] = true; }
-void IRAM_ATTR gotTouched3() { touched[3] = true; }
-void IRAM_ATTR gotTouched4() { touched[4] = true; }
-void IRAM_ATTR gotTouched5() { touched[5] = true; }
-void IRAM_ATTR gotTouched6() { touched[6] = true; }
-void IRAM_ATTR gotTouched7() { touched[7] = true; }
-void IRAM_ATTR gotTouched8() { touched[8] = true; }
-void IRAM_ATTR gotTouched9() { touched[9] = true; }
-
-void setupTouch() {
-  // pinMode(T0, INPUT);
-  // pinMode(T1, INPUT);
-  // pinMode(T2, INPUT);
-  // pinMode(T3, INPUT);
-  pinMode(T4, INPUT);
-  pinMode(T5, INPUT);
-  // pinMode(T6, INPUT);
-  pinMode(T7, INPUT);
-  pinMode(T8, INPUT);
-  pinMode(T9, INPUT);
-
-  delay(1000);
-
-  // touchAttachInterrupt( T0, gotTouched0, touchThreshold);
-  // touchAttachInterrupt( T1, gotTouched1, touchThreshold);
-  // touchAttachInterrupt( T2, gotTouched2, touchThreshold);
-  // touchAttachInterrupt( T3, gotTouched3, touchThreshold);
-  touchAttachInterrupt( T4, gotTouched4, touchThreshold);
-  touchAttachInterrupt( T5, gotTouched5, touchThreshold);
-  // touchAttachInterrupt( T6, gotTouched6, touchThreshold);
-  touchAttachInterrupt( T7, gotTouched7, touchThreshold);
-  touchAttachInterrupt( T8, gotTouched8, touchThreshold);
-  touchAttachInterrupt( T9, gotTouched9, touchThreshold);
-}
-
 void loop() {
   dnsServer.processNextRequest();
 
-  // display.clear();
-  // display.drawStringMaxWidth(0, 0, 128, "mem: " + String(ESP.getFreeHeap()));
-  // display.display();
-
-  delay(250);
-  Serial.print("------------ ");
-  Serial.println(ESP.getFreeHeap());
-  Serial.print(" 0:");
-  // Serial.print(touchRead(T0));
-  // Serial.print(" 1:");
-  // Serial.print(touchRead(T1));
-  // Serial.print(" 2:");
-  // Serial.print(touchRead(T2));
-  // Serial.print(" 3:");
-  // Serial.print(touchRead(T3));
-  Serial.print(" 4:");
-  Serial.print(touchRead(T4));
-  Serial.print(" 5:");
-  Serial.print(touchRead(T5));
-  // Serial.print(" 6:");
-  // Serial.print(touchRead(T6));
-  Serial.print(" 7:");
-  Serial.print(touchRead(T7));
-  Serial.print(" 8:");
-  Serial.print(touchRead(T8));
-  Serial.print(" 9:");
-  Serial.print(touchRead(T9));
-  Serial.println();
-  for (int i=0; i<10; i++) {
-    if (touched[i] == true) {
-      Serial.print(i);
-      Serial.print(" ");
-      touched[i] = false;
-    }
-  }
-  Serial.println();
   // delay(200);
   // display.clear();
   // float VBAT1 = analogRead(32) * (7.2 / 4095.0);

@@ -1,0 +1,13 @@
+{
+    "builds": [{
+        "name": "bundled-custom",
+        "bundle": {
+            "stripComments": true,
+            "inlineCss": true,
+            "sourcemaps": false
+        },
+        "js": {"minify": true},
+        "css": {"minify": true},
+        "html": {"minify": true}
+    }]
+}
