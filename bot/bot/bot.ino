@@ -11,6 +11,8 @@
 
 #include <DNSServer.h>
 
+#include "motor-crypto.h"
+
 const byte DNS_PORT = 53;
 
 unsigned long uptime = 0;
@@ -20,26 +22,8 @@ AsyncWebSocket ws("/ws");
 
 DNSServer dnsServer;
 
-#include "motor-crypto.h"
-
-// See the following for generating UUIDs:
-// https://www.uuidgenerator.net/
-
-#define SERIAL_SERVICE_UUID "6e400001-b5a3-f393-e0a9-e50e24dcca9e"
-
-#define LORA_CHAR_UUID      "00bada55-dead-1337-beef-cac75c07b075"
-#define MOVE_CHAR_UUID      "01bada55-dead-1337-beef-cac75c07b075"
-
-char macString[] = "abcd";
-
-char spaces[] = "                                                                                                                                ";
-
-// GPIO5  -- SX1278's SCK
-// GPIO19 -- SX1278's MISO
-// GPIO27 -- SX1278's MOSI
-// GPIO18 -- SX1278's CS
-// GPIO14 -- SX1278's RESET
-// GPIO26 -- SX1278's IRQ(Interrupt Request)
+uint8_t key[] = { 'h', 'e', 'l', 'l', 'o' };
+MotorCrypto motorCrypto = MotorCrypto(key, sizeof(key));
 
 #define SS      18
 #define RST     14
@@ -61,13 +45,6 @@ char spaces[] = "                                                               
 
 SSD1306  display(0x3c, 4, 15);
 
-byte mac[6];
-int counter = 0;
-int fontSize = 10;
-int drawX = 0;
-int drawY = 0;
-
-int tick = 0;
 
 void ledcAnalogWrite(uint8_t channel, uint32_t value, uint32_t valueMax = 255) {
   // calculate duty, 8191 from 2 ^ 13 - 1
@@ -113,9 +90,6 @@ void move(uint8_t mode, uint8_t motorL, uint8_t motorR) {
 }
 
 
-uint8_t key[] = { 'h', 'e', 'l', 'l', 'o' };
-MotorCrypto motorCrypto = MotorCrypto(key, sizeof(key));
-
 void onReceive(int packetSize) {
   // Serial.println("Got LoRa DATA!");
   uint8_t data[packetSize] = {};
@@ -124,36 +98,15 @@ void onReceive(int packetSize) {
     data[i] = LoRa.read();
   }
 
-  display.clear();
-  display.setTextAlignment(TEXT_ALIGN_LEFT);
-  display.setFont(ArialMT_Plain_10);
-
   if (packetSize == 80) {
     MotorEncrypted &encrypted = *(MotorEncrypted*)&data;
     if (motorCrypto.verifyHmac(encrypted)) {
       MotorMessage message = motorCrypto.decrypt(encrypted);
       if (motorCrypto.validateMessage(message)) {
-        display.drawStringMaxWidth(0, 0, 128, String(message.mode));
-        display.drawStringMaxWidth(20, 0, 128, String(message.motorL));
-        display.drawStringMaxWidth(60, 0, 128, String(message.motorR));
-
         move(message.mode,message.motorL,message.motorR);
-      } else {
-        display.drawStringMaxWidth(0, 0, 128, "validate fail");
       }
-    } else {
-      display.drawStringMaxWidth(0, 0, 128, "HMAC fail");
     }
   }
-
-  display.drawStringMaxWidth(0, 18, 128, String(LoRa.packetRssi()));
-  display.drawStringMaxWidth(50, 18, 128, String(packetSize));
-  display.drawStringMaxWidth(80, 18, 128, String(LoRa.packetSnr()));
-
-  display.drawStringMaxWidth(0, 42, 128, String(motorCrypto.getCounter()));
-  display.drawStringMaxWidth(0, 52, 128, String(motorCrypto.getConnectionId()));
-
-  display.display();
 }
 
 void onWsEvent(AsyncWebSocket * server, AsyncWebSocketClient * client, AwsEventType type, void * arg, uint8_t *data, size_t len){
@@ -273,8 +226,6 @@ void setupLora() {
 
 void setupWifi() {
   const char *ssid = "CCB07";
-  const char *password = "12345678";
-  const char *hostname = "bot";
 
   WiFi.mode(WIFI_AP);
   WiFi.softAP(ssid);
@@ -298,11 +249,6 @@ void setupWifi() {
 void setup() {
   Serial.begin(115200);
   while (!Serial); //If just the the basic function, must connect to a computer
-
-  uint8_t chipid[6];
-  esp_efuse_read_mac(chipid);
-  sprintf(macString, "%02x%02x", chipid[4], chipid[5]);
-  Serial.printf("%02x:%02x:%02x:%02x:%02x:%02x\n", chipid[0], chipid[1], chipid[2], chipid[3], chipid[4], chipid[5]);
 
   pinMode(16, OUTPUT);
   digitalWrite(16, LOW);    // set GPIO16 low to reset OLED
@@ -337,6 +283,7 @@ void setup() {
   ledcAttachPin(PWMB, PWMB_CH);
 
   setupWifi();
+  setupLora();
 }
 
 void redirect(AsyncWebServerRequest *request){
@@ -356,68 +303,5 @@ void parsePacket() {
 
 void loop() {
   dnsServer.processNextRequest();
-
-  // delay(200);
-  // display.clear();
-  // float VBAT1 = analogRead(32) * (7.2 / 4095.0);
-  // display.drawStringMaxWidth(0, 0, 128, "32: v" + String(VBAT1));
-  // float VBAT2 = analogRead(33) * (7.2 / 4095.0);
-  // display.drawStringMaxWidth(0, 40, 128, "33: v" + String(VBAT2));
-  // display.display();
-  //
-  // if (messageIdle == false) {
-  //   LoRa.beginPacket();
-  //   LoRa.print(macString);
-  //   LoRa.print("|");
-  //
-  //   Serial.println("*********");
-  //   Serial.print("New serial value: ");
-  //
-  //   int len = 0;
-  //
-  //   for (int i = 0; message[i] != '\0'; i++) {
-  //     Serial.print(message[i]);
-  //     LoRa.print(message[i]);
-  //
-  //     len++;
-  //   }
-  //
-  //   LoRa.endPacket();
-  //
-  //   Serial.println();
-  //   Serial.println("length ");
-  //   Serial.println(len);
-  //   Serial.println("*********");
-  //
-  //   message[0] = '\0';
-  //   messageIdle = true;
-  // }
-  //
-  // // try to parse packet
-  // int packetSize = LoRa.parsePacket();
-  // if (packetSize) {
-  //   char blah[packetSize + 1];
-  //   // received a packet
-  //   Serial.print("Received packet '");
-  //   int count = 0;
-  //   // read packet
-  //   while (LoRa.available()) {
-  //     char c = LoRa.read();
-  //     Serial.print(c);
-  //     blah[count] = c;
-  //     count++;
-  //   }
-  //
-  //   blah[count] = '\0';
-  //
-  //   pSerialChar->setValue(blah);
-  //   pSerialChar->notify();
-  //   // print RSSI of packet
-  //   Serial.print("' with RSSI ");
-  //   Serial.println(LoRa.packetRssi());
-  // }
-  //
-  // tick++;
-  //
-  // delay(1000);
+  parsePacket();
 }
