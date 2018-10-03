@@ -1,8 +1,0 @@
-{
-    "files.associations": {
-        "functional": "cpp",
-        "initializer_list": "cpp",
-        "iterator": "cpp",
-        "cstddef": "cpp"
-    }
-}
