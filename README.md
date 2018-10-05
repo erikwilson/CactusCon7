@@ -4,8 +4,7 @@
 
 ## Hack All The Things
 
-This year's badge is based around a TTGO LoRa OLED ESP32 and contains six capacitive 'buttons' driven from four sensor inputs (classic [n choose floor(n/2)](http://www.wolframalpha.com/input/?i=n+choose+floor(n%2F2)) problem). The ESP32 sports 4MB of programmable flash, WiFi, Bluetooth, dual core 240MHz processor, combined with a 433MHz long range radio and display. It requires a single 18650 lithium ion rechargable battery. Optional circuitry supports a motor driver which operates on the same lines as the OLED by disabling screen controls when using the motor controller.  Add in some d-pad action, motors, wheels, and a jöystick. It has an access point, captive portal, websockets, and hidden secrets.
-The firmware was written using Arduino. It’s completely hackable. Wear it, play with it, use it, modify it, break it, learn from it.
+This year's badge is based around a TTGO LoRa OLED ESP32 and contains six capacitive 'buttons' driven from four sensor inputs (classic [n choose floor(n/2)](http://www.wolframalpha.com/input/?i=n+choose+floor(n%2F2)) problem). The ESP32 sports 4MB of programmable flash, WiFi, Bluetooth, dual core 240MHz processor, combined with a 433MHz long range radio and display. It requires a single 18650 lithium ion rechargable battery. Optional circuitry supports a motor driver which operates on the same lines as the OLED by disabling screen controls when using the motor controller.  Add in some d-pad action, motors, wheels, and a jöystick. It has an access point, captive portal, websockets, and hidden secrets. The firmware was written using Arduino. It’s completely hackable. Wear it, play with it, use it, modify it, break it, learn from it.
 
 ## Volunteering
 
@@ -15,7 +14,7 @@ Every year countless hackers toil for endless hours to bring you this most exqui
 
 ## ̶B̶u̶g̶s̶ ̶ Features and Pull Requests
 
-Feel free to submit bugs, or even better submit a pull request with extra functionality! 
+Feel free to submit issues, or even better submit a pull request with extra functionality!
 
 The coin provides a swiss army knife of utility, what can you make with it?
 
