@@ -4,22 +4,22 @@
 
 ## Hack All The Things
 
-This year's badge is based around a TTGO LoRa OLED ESP32 and contains six capacitive buttons driven from four sensor inputs (classic [n choose floor(n/2)](http://www.wolframalpha.com/input/?i=n+choose+floor(n%2F2)) problem). It requires a single 18650 lithium ion rechargable battery. Optional circuitry supports a motor driver which operates on the same lines as the OLED (simply by disabling the OLED when using the motor controller). The processor also sports 4MB of programmable flash, BLE and WiFi, combined with a display and 433mhz long range radio. Add in some capacitive touch, motor controller, joystick, and maybe even hidden secrets.
-The firmware was written using Arduino. It’s completely hackable. Wear it, use it, modify it, break it, learn from it.
+This year's badge is based around a TTGO LoRa OLED ESP32 and contains six capacitive buttons driven from four sensor inputs (classic [n choose floor(n/2)](http://www.wolframalpha.com/input/?i=n+choose+floor(n%2F2)) problem). It requires a single 18650 lithium ion rechargable battery. Optional circuitry supports a motor driver which operates on the same lines as the OLED by disabling the screen when using the motor controller. The processor also sports 4MB of programmable flash, BLE and WiFi, combined with a 433mhz long range radio and display. Add in some capacitive touch, motor controller, joystick. It has an access point, captive portal, websockets, and hidden secrets.
+The firmware was written using Arduino. It’s completely hackable. Wear it, play with it, use it, modify it, break it, learn from it.
 
 ## Volunteering
 
-Every year countless hackers toil for endless hours to bring you the most exquisite CactusCon experience. Please email badge@cactuscon.com if you wish to sacrifice yourself.
+Every year countless hackers toil for endless hours to bring you this most exquisite and bespoke artisanal CactusCon experience. Please email badge@cactuscon.com if you wish to sacrifice yourself and contribute to the great process. Help build the global hacker community!
 
 ![Volunteer](https://github.com/erikwilson/CactusCon7/raw/master/images/board2.png "Volunteer")
 
-## Bugs and Pull Requests
+## ̶B̶u̶g̶s̶ ̶ Features and Pull Requests
 
 Feel free to submit bugs, or even better submit a pull request with extra functionality! 
 
 The coin provides a swiss army knife of utility, what can you make with it?
 
-![Pull Request](https://github.com/erikwilson/CactusCon7/raw/master/images/board3.png "Pull Request")
+![Pull Request](https://github.com/erikwilson/CactusCon7/raw/master/images/duck1.gif "Pull Request")
 
 ## Parts
 
@@ -42,6 +42,8 @@ The coin provides a swiss army knife of utility, what can you make with it?
 * 2 x [Zip Tie](https://www.amazon.com/dp/B01018DC96/)
 * 1 [Joystick](https://www.sparkfun.com/products/9032P) (for seperate badge)
 
+![Spare Parts](https://github.com/erikwilson/CactusCon7/raw/master/images/board3.png "Spare Parts")
+
 ## Additional Arduino Libraries
 
 * https://github.com/intrbiz/arduino-crypto
@@ -50,5 +52,4 @@ The coin provides a swiss army knife of utility, what can you make with it?
 * https://github.com/sandeepmistry/arduino-LoRa
 * https://github.com/ThingPulse/esp8266-oled-ssd1306
 * https://github.com/bblanchon/ArduinoJson
-
 
