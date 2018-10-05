@@ -4,19 +4,19 @@
 
 ## Hack All The Things
 
-This year's badge is based around a TTGO LoRa OLED ESP32 and contains six capacitive buttons driven from four sensor inputs. It requires a single 18650 lithium ion rechargable battery. Optional circuitry supports a motor driver which operates on the same lines as the OLED.
-
-![Volunteer](https://github.com/erikwilson/CactusCon7/raw/master/images/board2.png "Volunteer")
+This year's badge is based around a TTGO LoRa OLED ESP32 and contains six capacitive buttons driven from four sensor inputs (classic [n choose floor(n/2)](http://www.wolframalpha.com/input/?i=n+choose+floor(n%2F2)) problem). It requires a single 18650 lithium ion rechargable battery. Optional circuitry supports a motor driver which operates on the same lines as the OLED.
 
 ## Volunteering
 
 Every year countless hackers toil for endless hours to bring you the most exquisite CactusCon experience. Please email badge@cactuscon.com if you wish to sacrifice yourself.
 
-![Pull Request](https://github.com/erikwilson/CactusCon7/raw/master/images/board3.png "Pull Request")
+![Volunteer](https://github.com/erikwilson/CactusCon7/raw/master/images/board2.png "Volunteer")
 
 ## Bugs and Pull Requests
 
-Feel free to submit bugs, or even better submit a pull request with extra functionality!
+Feel free to submit bugs, or even better submit a pull request with extra functionality! The coin provides a swiss army knife of utility, what can you make with it?
+
+![Pull Request](https://github.com/erikwilson/CactusCon7/raw/master/images/board3.png "Pull Request")
 
 ## Parts
 
