@@ -4,7 +4,7 @@
 
 ## Hack All The Things
 
-This year's badge is based around a TTGO LoRa OLED ESP32 and contains six capacitive buttons driven from four sensor inputs (classic [n choose floor(n/2)](http://www.wolframalpha.com/input/?i=n+choose+floor(n%2F2)) problem). It requires a single 18650 lithium ion rechargable battery. Optional circuitry supports a motor driver which operates on the same lines as the OLED by disabling the screen when using the motor controller. The processor also sports 4MB of programmable flash, BLE and WiFi, combined with a 433mhz long range radio and display. Add in some capacitive touch, motor controller, joystick. It has an access point, captive portal, websockets, and hidden secrets.
+This year's badge is based around a TTGO LoRa OLED ESP32 and contains six capacitive 'buttons' driven from four sensor inputs (classic [n choose floor(n/2)](http://www.wolframalpha.com/input/?i=n+choose+floor(n%2F2)) problem). The processor sports 4MB of programmable flash, BLE and WiFi, combined with a 433mhz long range radio and display. It requires a single 18650 lithium ion rechargable battery. Optional circuitry supports a motor driver which operates on the same lines as the OLED by disabling screen controls when using the motor controller.  Add in some d-pad action, motors, wheels, and a jöystick. It has an access point, captive portal, websockets, and hidden secrets.
 The firmware was written using Arduino. It’s completely hackable. Wear it, play with it, use it, modify it, break it, learn from it.
 
 ## Volunteering
@@ -38,7 +38,7 @@ The coin provides a swiss army knife of utility, what can you make with it?
 * 1 [set Motors](https://www.sparkfun.com/products/13302)
 * 2 x [2 pos female header](https://www.digikey.com/product-detail/en/sullins-connector-solutions/PPPC021LFBN-RC/S7035-ND/810174)
 * 9v [battery connector](https://www.digikey.com/products/en?keywords=36-232-ND) (optional, can use 18650 power instead)
-* 1.5" x 2 [Velcro Tape](https://www.amazon.com/VELCRO-Brand-Sticky-Fasteners-Perfect/dp/B00006IC2L)
+* 1.5" x 3 [Velcro Tape](https://www.amazon.com/VELCRO-Brand-Sticky-Fasteners-Perfect/dp/B00006IC2L)
 * 2 x [Zip Tie](https://www.amazon.com/dp/B01018DC96/)
 * 1 [Joystick](https://www.sparkfun.com/products/9032P) (for seperate badge)
 
@@ -47,9 +47,10 @@ The coin provides a swiss army knife of utility, what can you make with it?
 ## Additional Arduino Libraries
 
 * https://github.com/intrbiz/arduino-crypto
-* https://github.com/me-no-dev/AsyncTCP
-* https://github.com/me-no-dev/ESPAsyncWebServer
 * https://github.com/sandeepmistry/arduino-LoRa
 * https://github.com/ThingPulse/esp8266-oled-ssd1306
 * https://github.com/bblanchon/ArduinoJson
-
+* https://github.com/me-no-dev/AsyncTCP
+* https://github.com/me-no-dev/ESPAsyncWebServer
+* https://github.com/me-no-dev/EspExceptionDecoder
+* https://github.com/me-no-dev/arduino-esp32fs-plugin
