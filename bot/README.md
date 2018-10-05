@@ -6,9 +6,13 @@
 
 This year's badge is based around a TTGO LoRa OLED ESP32 and contains six capacitive buttons driven from four sensor inputs. It requires a single 18650 lithium ion rechargable battery. Optional circuitry supports a motor driver which operates on the same lines as the OLED.
 
+![Volunteer](https://github.com/erikwilson/CactusCon7/raw/master/images/board2.png "Volunteer")
+
 ## Volunteering
 
 Every year countless hackers toil for endless hours to bring you the most exquisite CactusCon experience. Please email badge@cactuscon.com if you wish to sacrifice yourself.
+
+![Pull Request](https://github.com/erikwilson/CactusCon7/raw/master/images/board3.png "Pull Request")
 
 ## Bugs and Pull Requests
 
