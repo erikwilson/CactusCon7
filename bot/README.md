@@ -1,10 +1,10 @@
+![CactusCon 2018](https://github.com/erikwilson/CactusCon7/raw/master/images/board1.png "CactusCon 2018")
+
 # CactusCoin
 
 ## Hack All The Things
 
 This year's badge is based around a TTGO LoRa OLED ESP32 and contains six capacitive buttons driven from four sensor inputs. It requires a single 18650 lithium ion rechargable battery. Optional circuitry supports a motor driver which operates on the same lines as the OLED.
-
-
 
 ## Volunteering
 
